@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Yerazik</title>
+<meta name="description" content="Selected work by Yerazik.">
+<meta name="theme-color" content="#e9e6e0">
+<link rel="preload" as="image" href="temp.jpg" fetchpriority="high">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- The stage is the "virtual viewport". Dev mode scales it to simulate
+     a larger screen; at zoom 1 it is exactly the real viewport. -->
+<div class="stage" id="stage">
+
+  <!-- Background: sized to the image's own aspect ratio, moves slower -->
+  <div class="bg" id="bg" aria-hidden="true"></div>
+  <div class="veil" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="content" id="content">
+    <div class="inner">
+
+      <section class="hero">
+        <p class="eyebrow" data-r>Portfolio — 2026</p>
+        <h1 class="wordmark" data-r>Yerazik</h1>
+        <p class="lede" data-r>Design &amp; development, built quietly and carefully.</p>
+        <div class="scroll-cue" data-r><span></span></div>
+      </section>
+
+      <section class="work">
+
+        <article class="project left" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">01</span>
+            <h2>Atlas</h2>
+            <p>Identity &amp; web</p>
+          </div>
+        </article>
+
+        <article class="project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">02</span>
+            <h2>Marrow</h2>
+            <p>Editorial system</p>
+          </div>
+        </article>
+
+        <article class="project left" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">03</span>
+            <h2>Halcyon</h2>
+            <p>Product interface</p>
+          </div>
+        </article>
+
+        <article class="project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">04</span>
+            <h2>Verity</h2>
+            <p>Brand &amp; motion</p>
+          </div>
+        </article>
+
+        <article class="project left" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">05</span>
+            <h2>Solene</h2>
+            <p>Commerce</p>
+          </div>
+        </article>
+
+        <article class="project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">06</span>
+            <h2>Northline</h2>
+            <p>Art direction</p>
+          </div>
+        </article>
+
+      </section>
+
+      <section class="outro">
+        <p class="eyebrow" data-r>Currently taking on new work</p>
+        <a class="cta" href="mailto:yerazikboghozian@gmail.com" data-r>
+          <span>Work with me</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <p class="fine" data-r>yerazikboghozian@gmail.com</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="main.js" defer></script>
+</body>
+</html>
