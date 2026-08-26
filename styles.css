@@ -4,17 +4,24 @@
 ----------------------------------------------------------------*/
 
 :root{
-  /* Swap this one line when temp.jpg becomes an .svg (also update the
-     <link rel="preload"> in index.html so it still preloads). */
-  --bg-img: url("temp.jpg");
-  --bg-ar: 736 / 1308;      /* real size of temp.jpg; JS re-reads it on swap */
-
   --ink: #000;
   --rule: rgba(0,0,0,.14);
 
   /* The two knobs dev mode (press T) edits live */
   --pad: clamp(1.25rem, 5vw, 5.5rem);   /* breathing room at the screen edges */
   --maxw: 1360px;                       /* centred content column */
+  --hero-scale: 1;                      /* multiplies the whole hero type curve */
+  --bg-img: url("temp.jpg");            /* the wall photo */
+
+  /* Plant-shadow placement, driven by WASD / R in dev mode (press T) */
+  --plant-x: 0px;
+  --plant-y: 0px;
+  --plant-rot: 0deg;
+  --bg-zoom: 1;                         /* scales the wall photo only. The .bg
+                                           box already matches the photo's
+                                           portrait ratio, so 1 shows it whole;
+                                           <1 pulls back, >1 crops in */
+  --ground: #e9e6e0;                    /* shows either side of the image */
 
   --zoom: 1;                            /* dev-only virtual-viewport scale */
 
@@ -30,7 +37,7 @@ html{ scroll-behavior:auto; -webkit-text-size-adjust:100%; }
 body{
   font-family:var(--sans);
   color:var(--ink);
-  background:#e9e6e0;
+  background:var(--ground);
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
@@ -41,6 +48,7 @@ body{
 .stage{ position:relative; }
 
 .js .stage{
+  background:var(--ground);
   position:fixed;
   top:0; left:0;
   width:calc(100% / var(--zoom));
@@ -50,25 +58,202 @@ body{
   overflow:hidden;
 }
 
-/* ---------- background ---------- */
+/* ---------- background scene ----------
+
+   A cream wall in afternoon sun, drawn rather than photographed.
+
+   The trick: the wall is painted at its *shaded* tone, and the window
+   is four bright panes laid over it. The gaps between the panes are
+   therefore the frame shadows, so when the whole group is blurred once,
+   the frame softens exactly the way real penumbra does. Nothing here
+   animates except the plant layers.
+------------------------------------------------------------------*/
 
 .bg{
   position:absolute;
   top:0; left:0;
-  width:100%;
-  aspect-ratio:var(--bg-ar);   /* portrait source stays portrait, no squash */
-  min-height:100%;
+  width:100%; height:100%;
   z-index:0;
-  background:var(--bg-img) center top / cover no-repeat;
-  will-change:transform;
-  transform:translate3d(0,0,0);
+  overflow:hidden;
+  pointer-events:none;
+  /* the drawn wall shows wherever the zoomed photo does not reach */
+  background:var(--wall);
+  --wall:
+    radial-gradient(128% 104% at 20% 26%,
+      #ece7dc 0%, #e7e1d4 46%, #e1dbcc 78%, #dcd6c6 100%)
+    #e5dfd3;
+
+  --bar: 5.6vmax;                         /* frame thickness, pre-blur */
+  --tilt: 11deg;                          /* sun angle; see the media queries */
+  /* drives the plant composition; independent of --bg-zoom */
+  --pw: clamp(760px, 88vw + 30vh, 2100px);
+}
+.bg > *{ position:absolute; pointer-events:none; }
+
+/* The wall photo. BG zoom scales this layer alone - the plant shadows
+   keep their size and are placed over it with WASD / R in dev mode. */
+.bg::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:var(--bg-img) center / cover no-repeat;
+  transform:scale(var(--bg-zoom));
+  transform-origin:50% 50%;
+}
+.bg.drawn::before{ display:none; }
+
+@media (orientation:portrait){
+  .bg{ --pw: clamp(620px, 120vw + 34vh, 1600px); }
 }
 
-/* Keeps black type legible over any photo without washing it out */
+/* The frame must cross the wall over roughly the same share of the
+   viewport whatever its shape, so the tilt tracks the aspect ratio. */
+@media (max-aspect-ratio:1/1){ .bg{ --tilt:16deg; } }
+@media (max-aspect-ratio:3/4){ .bg{ --tilt:22deg; } }
+
+/* The photo carries its own window light and ledge, so the drawn ones
+   sit this out. Put class="bg drawn" on the scene to swap the photo for
+   the fully drawn wall instead. */
+.win, .falloff, .ledge{ display:none; }
+.bg.drawn{ background:var(--wall); }
+.bg.drawn .win,
+.bg.drawn .falloff,
+.bg.drawn .ledge{ display:block; }
+
+/* --- window light (static) --- */
+
+.win{
+  left:66%; top:47%;          /* the point where the two frame shadows cross */
+  width:0; height:0;
+  transform:rotate(var(--tilt));  /* the frame runs down to the right */
+  filter:blur(1.9vmax);
+}
+.pane{
+  position:absolute;
+  background:rgba(255,253,247,.58);
+  border-radius:1.4vmax;
+}
+.p-tl{ right:calc(var(--bar)/2); bottom:calc(var(--bar)/2); width:150vmax; height:118vmax; }
+.p-bl{ right:calc(var(--bar)/2); top:calc(var(--bar)/2);    width:150vmax; height:82vmax;  }
+.p-tr{ left:calc(var(--bar)/2);  bottom:calc(var(--bar)/2); width:118vmax; height:118vmax; opacity:.34; }
+.p-br{ left:calc(var(--bar)/2);  top:calc(var(--bar)/2);    width:118vmax; height:82vmax;  opacity:.56; }
+
+/* --- global falloff: open upper-left, cool top-right corner --- */
+
+.falloff{
+  inset:0;
+  background:
+    linear-gradient(62deg,
+      rgba(255,255,255,0) 40%, rgba(122,112,92,.07) 74%, rgba(122,112,92,.12) 100%),
+    linear-gradient(to bottom,
+      rgba(122,112,92,.05), rgba(255,255,255,0) 20%,
+      rgba(255,255,255,0) 70%, rgba(122,112,92,.09)),
+    radial-gradient(92% 64% at 13% 20%,
+      rgba(255,255,255,.30), rgba(255,255,255,0) 66%);
+}
+
+/* --- plant shadows (the only animated part) --- */
+
+/* The .bg box is as tall as the whole photo, but the shadows belong to the
+   light at the top of the page - so pin them to the first viewport of it. */
+.plants{
+  left:0; right:0; top:0; bottom:auto;
+  height:calc(100svh / var(--zoom));
+  color:#a79d86;
+  mix-blend-mode:multiply;
+  /* dev mode nudges these three; the leaves animate inside them */
+  transform:translate3d(var(--plant-x), var(--plant-y), 0) rotate(var(--plant-rot));
+  transform-origin:14% 86%;
+}
+
+.leaf{
+  --k:1;
+  --s:calc(var(--pw) * var(--k));
+  position:absolute;
+  width:var(--s); height:var(--s);
+  left:calc(var(--s) * -.11);
+  bottom:calc(var(--s) * -.09);
+  transform-origin:10% 94%;      /* pivot near the pot, not the leaf tips */
+  --sway:1;                      /* one knob for the whole breeze */
+  will-change:transform;
+  animation-iteration-count:infinite;
+  animation-timing-function:cubic-bezier(.42,0,.58,1);
+}
+
+/* Deepest layer is biggest and softest; each has its own period and a
+   negative delay, so the layers never line up into a visible sway. */
+.l1{ --k:1.24; opacity:.5;  filter:blur(1.15vmax); animation-name:drift-a; animation-duration:46s; animation-delay:-11s; }
+.l2{ --k:1.02; opacity:.5;  filter:blur(.85vmax); animation-name:drift-b; animation-duration:37s; animation-delay:-27s; }
+.l3{ --k:.82;  opacity:.46; filter:blur(.6vmax);   animation-name:drift-c; animation-duration:57s; animation-delay:-6s;  }
+.l4{ --k:.70;  opacity:.38; filter:blur(.75vmax); animation-name:drift-d; animation-duration:33s; animation-delay:-38s; }
+.l5{ --k:.95;  opacity:.34; filter:blur(.5vmax);  animation-name:drift-e; animation-duration:43s; animation-delay:-19s; }
+
+/* Irregular stops on purpose - nothing lands on an even beat. */
+@keyframes drift-a{
+  0%  { transform:none; }
+  19% { transform:translate3d(calc(var(--sway) * 14px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * 1.3deg)); }
+  37% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * -0.7deg)); }
+  58% { transform:translate3d(calc(var(--sway) * 22px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * 1.85deg)); }
+  74% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * 0.45deg)); }
+  89% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * -1.05deg)); }
+  100%{ transform:none; }
+}
+@keyframes drift-b{
+  0%  { transform:none; }
+  23% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -1.25deg)); }
+  41% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * 0.9deg)); }
+  63% { transform:translate3d(calc(var(--sway) * -18px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * -1.95deg)); }
+  81% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 13px),0) rotate(calc(var(--sway) * 0.6deg)); }
+  100%{ transform:none; }
+}
+@keyframes drift-c{
+  0%  { transform:none; }
+  16% { transform:translate3d(calc(var(--sway) * 18px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * 1.6deg)); }
+  34% { transform:translate3d(calc(var(--sway) * -5px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * -0.45deg)); }
+  52% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 13px),0) rotate(calc(var(--sway) * 2.2deg)); }
+  69% { transform:translate3d(calc(var(--sway) * -18px),calc(var(--sway) * 0px),0) rotate(calc(var(--sway) * -1.5deg)); }
+  87% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * 0.8deg)); }
+  100%{ transform:none; }
+}
+@keyframes drift-d{
+  0%  { transform:none; }
+  27% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * -2.2deg)); }
+  46% { transform:translate3d(calc(var(--sway) * 13px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * 1.15deg)); }
+  68% { transform:translate3d(calc(var(--sway) * -5px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -0.55deg)); }
+  84% { transform:translate3d(calc(var(--sway) * 18px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * 2.45deg)); }
+  100%{ transform:none; }
+}
+@keyframes drift-e{
+  0%  { transform:none; }
+  21% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * 1.95deg)); }
+  39% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * -1.35deg)); }
+  57% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * 0.9deg)); }
+  79% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -2.05deg)); }
+  100%{ transform:none; }
+}
+
+/* --- ledge / baseboard --- */
+
+.ledge{
+  left:-8%; right:-8%; bottom:-4%;
+  height:26%;
+  transform:rotate(1.1deg);      /* the reference is a hair off level */
+  filter:blur(.45vmax);
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,0) 0 40%,
+    rgba(124,114,94,.13) 42%,
+    rgba(255,255,255,.32) 45%,
+    rgba(255,255,255,.20) 62%,
+    rgba(124,114,94,.07) 66%,
+    rgba(255,255,255,.24) 70%,
+    rgba(255,255,255,.10) 100%);
+}
+
+/* Barely there - just enough to keep black type off a bare white patch */
 .veil{
   position:absolute; inset:0; z-index:1; pointer-events:none;
   background:linear-gradient(to bottom,
-    rgba(238,236,231,.72), rgba(238,236,231,.46) 45%, rgba(238,236,231,.78));
+    rgba(238,236,231,.18), rgba(238,236,231,.06) 45%, rgba(238,236,231,.22));
 }
 
 /* 1px of tooth - pure CSS, no image request */
@@ -119,7 +304,7 @@ body{
 }
 
 .wordmark{
-  font-size:clamp(3.75rem, 15vw, 15rem);
+  font-size:calc(clamp(3.75rem, 15vw, 15rem) * var(--hero-scale));
   line-height:.82;
   letter-spacing:-.045em;
   font-weight:500;
@@ -129,7 +314,7 @@ body{
 .lede{
   margin-top:clamp(1.5rem,3vw,2.5rem);
   max-width:30ch;
-  font-size:clamp(.9375rem,1.35vw,1.125rem);
+  font-size:calc(clamp(.9375rem,1.35vw,1.125rem) * min(var(--hero-scale), 1.35));
   line-height:1.5;
   opacity:.72;
 }
@@ -390,8 +575,9 @@ body{
 @media (prefers-reduced-motion:reduce){
   .js .stage{ position:relative; width:100%; height:auto; transform:none; overflow:visible; }
   .js .content{ position:relative; transform:none !important; }
-  .bg{ position:fixed; inset:0; width:100%; height:100%; aspect-ratio:auto; transform:none !important; }
+  .bg{ position:fixed; inset:0; width:100%; height:100%; transform:none !important; }
   .veil,.grain{ position:fixed; }
+  .leaf{ animation:none !important; }
   [data-r]{ opacity:1 !important; transform:none !important; transition:none !important; }
   .scroll-cue span{ animation:none; }
 }

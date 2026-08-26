@@ -15,8 +15,164 @@
      a larger screen; at zoom 1 it is exactly the real viewport. -->
 <div class="stage" id="stage">
 
-  <!-- Background: sized to the image's own aspect ratio, moves slower -->
-  <div class="bg" id="bg" aria-hidden="true"></div>
+  <!-- =========================================================
+       Background scene: a cream wall in late-afternoon light.
+       Layer order follows the physics: wall, window light, light
+       falloff, plant shadows, ledge. All of it decorative, inert,
+       and animated with transforms only.
+  ========================================================== -->
+  <div class="bg" id="bg" aria-hidden="true">
+
+    <!-- Window light: four panes of sun. The gaps between them are
+         the frame shadows. Static; blurred once as a group. -->
+    <div class="win">
+      <i class="pane p-tl"></i><i class="pane p-tr"></i>
+      <i class="pane p-bl"></i><i class="pane p-br"></i>
+    </div>
+
+    <!-- Overall falloff: warm and open upper-left, cooler top-right -->
+    <div class="falloff"></div>
+
+    <!-- Plant shadows: the only moving thing in the scene -->
+    <div class="plants">
+
+      <svg class="leaf l1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
+        <defs><path id="a1" d="M0 0C19-22 26-58 5-100C-3-105-9-103-12-97C-26-60-19-24 0 0Z"/></defs>
+        <g fill="currentColor">
+          <path d="M-30 1040C90 975 210 915 330 855 420 810 500 770 590 735" stroke="currentColor" stroke-width="15" fill="none" stroke-linecap="round"/>
+          <path d="M-10 1020C60 900 110 780 160 650" stroke="currentColor" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <path d="M-20 1062C160 1012 340 962 520 902" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <use href="#a1" transform="translate(70 980) rotate(10) scale(1.5)"/>
+          <use href="#a1" transform="translate(150 930) rotate(34) scale(1.3)"/>
+          <use href="#a1" transform="translate(145 946) rotate(-18) scale(1.2)"/>
+          <use href="#a1" transform="translate(240 890) rotate(52) scale(1.45)"/>
+          <use href="#a1" transform="translate(235 902) rotate(4) scale(1.15)"/>
+          <use href="#a1" transform="translate(330 855) rotate(66) scale(1.3)"/>
+          <use href="#a1" transform="translate(325 863) rotate(26) scale(1.5)"/>
+          <use href="#a1" transform="translate(420 812) rotate(74) scale(1.2)"/>
+          <use href="#a1" transform="translate(415 821) rotate(40) scale(1.35)"/>
+          <use href="#a1" transform="translate(505 775) rotate(86) scale(1.25)"/>
+          <use href="#a1" transform="translate(500 783) rotate(52) scale(1.1)"/>
+          <use href="#a1" transform="translate(590 738) rotate(96) scale(1.15)"/>
+          <use href="#a1" transform="translate(585 746) rotate(64) scale(1.2)"/>
+          <use href="#a1" transform="translate(20 970) rotate(-6) scale(1.4)"/>
+          <use href="#a1" transform="translate(55 900) rotate(18) scale(1.3)"/>
+          <use href="#a1" transform="translate(50 906) rotate(-30) scale(1.25)"/>
+          <use href="#a1" transform="translate(90 830) rotate(8) scale(1.45)"/>
+          <use href="#a1" transform="translate(85 841) rotate(-24) scale(1.2)"/>
+          <use href="#a1" transform="translate(120 760) rotate(26) scale(1.35)"/>
+          <use href="#a1" transform="translate(115 771) rotate(-12) scale(1.3)"/>
+          <use href="#a1" transform="translate(150 690) rotate(14) scale(1.4)"/>
+          <use href="#a1" transform="translate(145 701) rotate(-30) scale(1.15)"/>
+          <use href="#a1" transform="translate(166 642) rotate(2) scale(1.25)"/>
+          <use href="#a1" transform="translate(100 1035) rotate(78) scale(1.4)"/>
+          <use href="#a1" transform="translate(200 1005) rotate(88) scale(1.3)"/>
+          <use href="#a1" transform="translate(300 975) rotate(70) scale(1.5)"/>
+          <use href="#a1" transform="translate(400 945) rotate(96) scale(1.25)"/>
+          <use href="#a1" transform="translate(490 913) rotate(82) scale(1.35)"/>
+          <use href="#a1" transform="translate(60 1050) rotate(-40) scale(1.6)"/>
+          <use href="#a1" transform="translate(140 1040) rotate(-14) scale(1.7)"/>
+          <use href="#a1" transform="translate(220 1030) rotate(12) scale(1.5)"/>
+          <use href="#a1" transform="translate(300 1020) rotate(38) scale(1.6)"/>
+          <use href="#a1" transform="translate(380 1005) rotate(60) scale(1.4)"/>
+          <use href="#a1" transform="translate(30 900) rotate(-46) scale(1.3)"/>
+          <use href="#a1" transform="translate(200 960) rotate(-2) scale(1.4)"/>
+          <use href="#a1" transform="translate(270 940) rotate(24) scale(1.3)"/>
+        </g>
+      </svg>
+
+      <svg class="leaf l2" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
+        <defs><path id="a2" d="M0 0C16-24 23-60 2-102C-6-107-12-104-15-98C-27-62-17-26 0 0Z"/></defs>
+        <g fill="currentColor">
+          <path d="M-40 1010C70 940 180 880 300 830 380 796 450 770 520 752" stroke="currentColor" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <path d="M20 1030C70 930 100 830 130 720" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <use href="#a2" transform="translate(40 995) rotate(-14) scale(1.35)"/>
+          <use href="#a2" transform="translate(110 940) rotate(22) scale(1.5)"/>
+          <use href="#a2" transform="translate(105 952) rotate(-34) scale(1.2)"/>
+          <use href="#a2" transform="translate(190 892) rotate(44) scale(1.3)"/>
+          <use href="#a2" transform="translate(186 903) rotate(0) scale(1.45)"/>
+          <use href="#a2" transform="translate(276 850) rotate(60) scale(1.25)"/>
+          <use href="#a2" transform="translate(270 860) rotate(18) scale(1.4)"/>
+          <use href="#a2" transform="translate(360 812) rotate(72) scale(1.2)"/>
+          <use href="#a2" transform="translate(356 822) rotate(34) scale(1.3)"/>
+          <use href="#a2" transform="translate(444 784) rotate(88) scale(1.15)"/>
+          <use href="#a2" transform="translate(440 792) rotate(46) scale(1.25)"/>
+          <use href="#a2" transform="translate(524 754) rotate(100) scale(1.2)"/>
+          <use href="#a2" transform="translate(60 950) rotate(-2) scale(1.3)"/>
+          <use href="#a2" transform="translate(85 880) rotate(-26) scale(1.25)"/>
+          <use href="#a2" transform="translate(90 872) rotate(16) scale(1.4)"/>
+          <use href="#a2" transform="translate(112 796) rotate(-16) scale(1.35)"/>
+          <use href="#a2" transform="translate(118 788) rotate(24) scale(1.2)"/>
+          <use href="#a2" transform="translate(134 722) rotate(-8) scale(1.3)"/>
+          <use href="#a2" transform="translate(150 980) rotate(-40) scale(1.4)"/>
+          <use href="#a2" transform="translate(210 965) rotate(-16) scale(1.5)"/>
+          <use href="#a2" transform="translate(265 950) rotate(8) scale(1.35)"/>
+          <use href="#a2" transform="translate(330 935) rotate(32) scale(1.4)"/>
+          <use href="#a2" transform="translate(395 915) rotate(54) scale(1.3)"/>
+          <use href="#a2" transform="translate(120 880) rotate(-30) scale(1.25)"/>
+          <use href="#a2" transform="translate(185 865) rotate(-6) scale(1.3)"/>
+          <use href="#a2" transform="translate(250 845) rotate(18) scale(1.2)"/>
+        </g>
+      </svg>
+
+      <svg class="leaf l3" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
+        <defs><path id="a3" d="M0 0C20-20 28-56 7-98C0-104-7-102-12-95C-25-58-19-22 0 0Z"/></defs>
+        <g fill="currentColor">
+          <path d="M-20 1000C80 940 170 890 260 856 330 830 390 812 450 800" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <use href="#a3" transform="translate(30 985) rotate(6) scale(1.2)"/>
+          <use href="#a3" transform="translate(100 940) rotate(38) scale(1.3)"/>
+          <use href="#a3" transform="translate(96 950) rotate(-22) scale(1.1)"/>
+          <use href="#a3" transform="translate(178 898) rotate(56) scale(1.25)"/>
+          <use href="#a3" transform="translate(174 908) rotate(10) scale(1.35)"/>
+          <use href="#a3" transform="translate(258 858) rotate(70) scale(1.15)"/>
+          <use href="#a3" transform="translate(252 868) rotate(28) scale(1.3)"/>
+          <use href="#a3" transform="translate(336 828) rotate(84) scale(1.1)"/>
+          <use href="#a3" transform="translate(330 838) rotate(44) scale(1.2)"/>
+          <use href="#a3" transform="translate(414 806) rotate(94) scale(1.05)"/>
+          <use href="#a3" transform="translate(408 814) rotate(58) scale(1.15)"/>
+          <use href="#a3" transform="translate(70 780) rotate(-24) scale(1.15)"/>
+          <use href="#a3" transform="translate(130 745) rotate(0) scale(1.2)"/>
+          <use href="#a3" transform="translate(95 700) rotate(-14) scale(1.05)"/>
+          <use href="#a3" transform="translate(180 830) rotate(20) scale(1.1)"/>
+          <use href="#a3" transform="translate(240 900) rotate(44) scale(1.15)"/>
+        </g>
+      </svg>
+
+      <svg class="leaf l4" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
+        <defs><path id="a4" d="M0 0C13-30 18-70 3-116C-3-121-9-119-12-112C-23-70-14-30 0 0Z"/></defs>
+        <g fill="currentColor">
+          <use href="#a4" transform="translate(40 1000) rotate(-10) scale(1.6)"/>
+          <use href="#a4" transform="translate(90 1000) rotate(6) scale(1.9)"/>
+          <use href="#a4" transform="translate(140 1000) rotate(-22) scale(1.5)"/>
+          <use href="#a4" transform="translate(190 1000) rotate(16) scale(1.75)"/>
+          <use href="#a4" transform="translate(240 1000) rotate(-4) scale(1.35)"/>
+          <use href="#a4" transform="translate(70 860) rotate(-16) scale(1.3)"/>
+          <use href="#a4" transform="translate(150 830) rotate(10) scale(1.2)"/>
+          <use href="#a4" transform="translate(215 880) rotate(30) scale(1.25)"/>
+        </g>
+      </svg>
+
+      <svg class="leaf l5" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
+        <defs><path id="a5" d="M0 0C17-22 24-56 3-96C-4-101-10-99-13-93C-26-58-17-24 0 0Z"/></defs>
+        <g fill="currentColor">
+          <path d="M340 1010C420 960 490 918 560 890" stroke="currentColor" stroke-width="12" fill="none" stroke-linecap="round"/>
+          <use href="#a5" transform="translate(380 982) rotate(48) scale(1.2)"/>
+          <use href="#a5" transform="translate(374 992) rotate(6) scale(1.1)"/>
+          <use href="#a5" transform="translate(452 934) rotate(64) scale(1.3)"/>
+          <use href="#a5" transform="translate(446 944) rotate(22) scale(1.15)"/>
+          <use href="#a5" transform="translate(524 902) rotate(80) scale(1.1)"/>
+          <use href="#a5" transform="translate(518 910) rotate(40) scale(1.2)"/>
+          <use href="#a5" transform="translate(566 888) rotate(96) scale(1)"/>
+          <use href="#a5" transform="translate(300 960) rotate(26) scale(1.1)"/>
+          <use href="#a5" transform="translate(250 930) rotate(4) scale(1.05)"/>
+        </g>
+      </svg>
+
+    </div>
+
+    <!-- Ledge / baseboard, very slightly off-level like the reference -->
+    <div class="ledge"></div>
+  </div>
   <div class="veil" aria-hidden="true"></div>
   <div class="grain" aria-hidden="true"></div>
 
@@ -83,6 +239,42 @@
             <span class="num">06</span>
             <h2>Northline</h2>
             <p>Art direction</p>
+          </div>
+        </article>
+
+        <article class="project left" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">07</span>
+            <h2>Cairn</h2>
+            <p>Wayfinding</p>
+          </div>
+        </article>
+
+        <article class="project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">08</span>
+            <h2>Lorne</h2>
+            <p>Publication</p>
+          </div>
+        </article>
+
+        <article class="project left" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">09</span>
+            <h2>Ember</h2>
+            <p>Campaign</p>
+          </div>
+        </article>
+
+        <article class="project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <span class="num">10</span>
+            <h2>Sable</h2>
+            <p>Studio site</p>
           </div>
         </article>
 
