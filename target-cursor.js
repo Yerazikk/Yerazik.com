@@ -1,11 +1,12 @@
 /* ---------------------------------------------------------------
    Target cursor - a vanilla port of the React/GSAP component.
 
-   Same behaviour, no dependencies: a spinning bracket that snaps its
-   four corners onto anything matching .cursor-target, lags behind the
-   pointer while it sits inside (the "parallax"), and springs back on
-   leave. One requestAnimationFrame loop, transforms only, no layout
-   reads except a single getBoundingClientRect while a target is hot.
+   Same behaviour, no dependencies: a spinning bracket that snaps onto
+   a whole project (card, caption, and description together), the
+   wordmark, the mail button, or a nav link, lags behind the pointer
+   while it sits inside (the "parallax"), and springs back on leave.
+   One requestAnimationFrame loop, transforms only, no layout reads
+   except a single getBoundingClientRect while a target is hot.
 
    That last read is deliberate. This site scrolls by translating
    .content, so a target keeps moving under a still pointer after the
@@ -17,7 +18,6 @@
   'use strict';
 
   var CONFIG = {
-    targetSelector: '.cursor-target',
     spinDuration: 4.2,          // seconds per full turn while idle
     hideDefaultCursor: true,
     parallaxOn: true,           // corners lag the pointer inside a target
@@ -55,40 +55,20 @@
   var CORNER = 12;   // corner box, px - must match the CSS
   var BORDER = 3;    // its stroke width, px - must match the CSS
 
-  /* ---------- what the bracket is allowed to grab ----------
+  /* ---------- what the bracket grabs ----------
 
-     One entry per shape worth trying. `sel` replaces CONFIG.targetSelector
-     while the mode is live; `box` lets a mode frame something larger than
-     the element it latched onto (the row mode measures the card together
-     with its description); `radius` / `stick` override gravity, because a
-     130px reach that feels right around a card is absurd around a 60px
-     stack chip. The wordmark and the mail button stay grabbable in every
-     mode - they are the opening pose and the only real button on the page.
+     Always the whole project - card, caption, and description together -
+     plus the wordmark, the mail button, and the nav links, which are
+     grabbable regardless since they're the opening pose and the only
+     other real controls on the page. */
 
-     Cycle live with C once dev mode has been opened once. */
+  var TARGET_SEL = '.project, .wordmark, .cta, .nav a';
+  var GRAVITY_RADIUS = 100;  // px outside the box where the pull begins
+  var GRAVITY_STICK  = CONFIG.gravityStick;
 
-  var EXTRAS = '.wordmark, .cta, .nav a';
-
-  var MODES = [
-    { id: 'card',  name: 'Picture card (default)', sel: '.cursor-target' },
-    { id: 'frame', name: 'Picture only',           sel: '.project .frame, ' + EXTRAS },
-    { id: 'title', name: 'Project name',           sel: '.meta h2, ' + EXTRAS,
-      box: textBox },
-    { id: 'stack', name: 'Stack squares',          sel: '.stack li, ' + EXTRAS,
-      radius: 40, stick: 14 },
-    { id: 'row',   name: 'Whole project, wide',    sel: '.project, ' + EXTRAS,
-      radius: 100,
-      box: function (el) { return union(el, '.detail'); } }
-  ];
-
-  // Always opens on the full-card mode (index 0). Cycling with C during a
-  // dev session no longer persists across reloads - card is the one keeper.
-  var modeIdx = 0;
-
-  function mode()     { return MODES[modeIdx]; }
-  function selector() { return mode().sel; }
-  function radius()   { return mode().radius || CONFIG.gravityRadius; }
-  function stick()    { return mode().stick  || CONFIG.gravityStick; }
+  function selector() { return TARGET_SEL; }
+  function radius()   { return GRAVITY_RADIUS; }
+  function stick()    { return GRAVITY_STICK; }
 
   /* The element's own box, grown to swallow any `sel` it contains. */
   function union(el, sel) {
@@ -106,22 +86,11 @@
     return { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t };
   }
 
-  /* The inked width of the words, not the block they sit in. A heading is a
-     full-width block element, so measuring it frames a lot of empty column;
-     a range over its contents frames the name itself. */
-  function textBox(el) {
-    var r;
-    try {
-      var range = document.createRange();
-      range.selectNodeContents(el);
-      r = range.getBoundingClientRect();
-    } catch (e) {}
-    return (r && (r.width || r.height)) ? r : el.getBoundingClientRect();
-  }
-
+  /* A project's box includes its description, so the bracket frames the
+     whole thing rather than just the picture. Everything else measures
+     as itself. */
   function rectFor(el) {
-    var m = mode();
-    return m.box ? m.box(el) : el.getBoundingClientRect();
+    return el.classList.contains('project') ? union(el, '.detail') : el.getBoundingClientRect();
   }
 
   /* ---------- bail out where a custom cursor is wrong ---------- */
@@ -202,6 +171,7 @@
     wrap.classList.add('is-on');
     el.classList.add('is-cursor');    // the element's own hook - a project
                                       // opens its detail panel off this
+    document.body.classList.add('tc-focus'); // everything else blurs (styles.css)
 
     // Under gravity the proximity scan owns both the latch and the release -
     // a plain mouseleave would drop the target the instant the pointer
@@ -223,6 +193,7 @@
     release = 0;
     for (var i = 0; i < 4; i++) { from[i][0] = cur[i][0]; from[i][1] = cur[i][1]; }
     wrap.classList.remove('is-on');
+    document.body.classList.remove('tc-focus');
     start();
   }
 
@@ -421,52 +392,6 @@
   document.addEventListener('mouseenter', function () {
     if (!suspended) wrap.classList.add('is-live');
   });
-
-  /* ---------- mode switching ----------
-     Dropping the latch matters: the held element almost certainly is not a
-     target under the new mode, and the scan would keep it alive on
-     incumbency alone. The toast is the only feedback there is, since the
-     dev panel is usually closed when you are actually looking at this. */
-
-  var toast = null, toastAt = 0;
-
-  function flash(text) {
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.className = 'tc-toast';
-      toast.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(toast);
-    }
-    toast.textContent = text;
-    toast.classList.add('is-up');
-    clearTimeout(toastAt);
-    toastAt = setTimeout(function () { toast.classList.remove('is-up'); }, 1400);
-  }
-
-  function setMode(id, quiet) {
-    for (var i = 0; i < MODES.length; i++) {
-      if (MODES[i].id !== id) continue;
-      unlatch();
-      modeIdx = i;
-      checkAt = 0;                    // re-scan on the next frame
-      if (!quiet) flash('Cursor: ' + MODES[i].name);
-      start();
-      return MODES[i];
-    }
-    return null;
-  }
-
-  window.TargetCursor = {
-    modes: function () {
-      return MODES.map(function (m) { return { id: m.id, name: m.name }; });
-    },
-    mode: function () { return mode().id; },
-    modeName: function () { return mode().name; },
-    set: setMode,
-    cycle: function (d) {
-      return setMode(MODES[(modeIdx + (d || 1) + MODES.length) % MODES.length].id);
-    }
-  };
 
   /* ---------- opening pose ----------
      Sit on the wordmark, corners flying in from rest, until the pointer is
