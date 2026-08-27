@@ -6,7 +6,13 @@
 <title>Yerazik</title>
 <meta name="description" content="Selected work by Yerazik.">
 <meta name="theme-color" content="#e9e6e0">
-<link rel="preload" as="image" href="temp.jpg" fetchpriority="high">
+<link rel="preload" as="image" href="background.svg" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The three candidate faces for the wordmark. Dev mode switches
+     between them with Z / X (press T first); Bebas Neue is the one in
+     place, and it is also the default set in styles.css. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Big+Shoulders+Display:wght@300&family=Six+Caps&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -35,6 +41,11 @@
 
     <!-- Plant shadows: the only moving thing in the scene -->
     <div class="plants">
+
+      <!-- The gust layers only run once, on load: the whole mass drops in
+           slightly off-position and settles, as if the light had just
+           caught it. The per-leaf drift keeps running inside them. -->
+      <div class="gust">
 
       <svg class="leaf l1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
         <defs><path id="a1" d="M0 0C19-22 26-58 5-100C-3-105-9-103-12-97C-26-60-19-24 0 0Z"/></defs>
@@ -168,6 +179,56 @@
         </g>
       </svg>
 
+
+      </div>
+
+      <!-- Arrowhead vine, hung high in the top-right: broad arrow-shaped
+           leaves on stems that trail down toward the corner. Anchored to
+           the opposite corner from l1-l5 so the two masses frame the type. -->
+      <div class="vine">
+      <div class="gust gust-b">
+      <!-- Two nested pendulums, then a third on the leaf itself. Each is a
+           single ease-in-out swing on its own prime-ish period, so the sum
+           never repeats but never changes direction abruptly either. -->
+      <div class="vine-sway">
+      <div class="vine-lift">
+      <svg class="leaf l6" viewBox="0 0 1000 1000" preserveAspectRatio="xMaxYMin slice">
+        <defs><path id="a6" d="M0 0C-4-10-26-10-33-20C-27-48-15-78 0-112C15-78 27-48 33-20C26-10 4-10 0 0Z"/></defs>
+        <g fill="currentColor">
+          <path d="M1040-20C930 70 820 160 700 250 612 316 522 372 430 416" stroke="currentColor" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <path d="M1020 10C980 120 930 232 868 344" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <path d="M1055 70C905 118 755 168 606 222" stroke="currentColor" stroke-width="12" fill="none" stroke-linecap="round"/>
+          <use href="#a6" transform="translate(960 40) rotate(196) scale(1.35)"/>
+          <use href="#a6" transform="translate(880 108) rotate(168) scale(1.5)"/>
+          <use href="#a6" transform="translate(886 96) rotate(214) scale(1.2)"/>
+          <use href="#a6" transform="translate(792 176) rotate(150) scale(1.4)"/>
+          <use href="#a6" transform="translate(800 164) rotate(198) scale(1.25)"/>
+          <use href="#a6" transform="translate(700 252) rotate(142) scale(1.45)"/>
+          <use href="#a6" transform="translate(708 240) rotate(186) scale(1.15)"/>
+          <use href="#a6" transform="translate(612 318) rotate(134) scale(1.3)"/>
+          <use href="#a6" transform="translate(620 306) rotate(176) scale(1.2)"/>
+          <use href="#a6" transform="translate(522 374) rotate(128) scale(1.25)"/>
+          <use href="#a6" transform="translate(530 362) rotate(170) scale(1.1)"/>
+          <use href="#a6" transform="translate(432 418) rotate(122) scale(1.15)"/>
+          <use href="#a6" transform="translate(1000 12) rotate(232) scale(1.55)"/>
+          <use href="#a6" transform="translate(996 120) rotate(206) scale(1.3)"/>
+          <use href="#a6" transform="translate(946 232) rotate(188) scale(1.4)"/>
+          <use href="#a6" transform="translate(952 220) rotate(226) scale(1.15)"/>
+          <use href="#a6" transform="translate(890 340) rotate(174) scale(1.25)"/>
+          <use href="#a6" transform="translate(866 348) rotate(210) scale(1.35)"/>
+          <use href="#a6" transform="translate(920 88) rotate(160) scale(1.2)"/>
+          <use href="#a6" transform="translate(830 140) rotate(184) scale(1.3)"/>
+          <use href="#a6" transform="translate(740 190) rotate(158) scale(1.25)"/>
+          <use href="#a6" transform="translate(748 178) rotate(202) scale(1.1)"/>
+          <use href="#a6" transform="translate(652 232) rotate(146) scale(1.35)"/>
+          <use href="#a6" transform="translate(660 220) rotate(192) scale(1.2)"/>
+          <use href="#a6" transform="translate(606 224) rotate(136) scale(1.15)"/>
+        </g>
+      </svg>
+      </div>
+      </div>
+      </div>
+      </div>
     </div>
 
     <!-- Ledge / baseboard, very slightly off-level like the reference -->
@@ -181,108 +242,200 @@
 
       <section class="hero">
         <p class="eyebrow" data-r>Portfolio — 2026</p>
-        <h1 class="wordmark" data-r>Yerazik</h1>
+        <h1 class="wordmark cursor-target" data-r>Yerazik</h1>
         <p class="lede" data-r>Design &amp; development, built quietly and carefully.</p>
-        <div class="scroll-cue" data-r><span></span></div>
       </section>
 
       <section class="work">
 
-        <article class="project left" data-r>
+        <a class="cursor-target project left" data-r href="https://drawangulate.vercel.app/" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">01</span>
-            <h2>Atlas</h2>
-            <p>Identity &amp; web</p>
+            <h2>Drawangulate</h2>
+            <p>Multiplayer drawing game</p>
+          </div>
+          <div class="detail">
+            <p>A round-based drawing game for a room full of people: one prompt, everyone draws at once, and the guessing happens live as the strokes land.</p>
+            <ul class="stack">
+              <li>Next.js</li>
+              <li>TypeScript</li>
+              <li>WebSockets</li>
+              <li>Canvas API</li>
+              <li>Vercel</li>
+            </ul>
+          </div>
+        </a>
+
+        <a class="cursor-target project right" data-r href="https://use-muse.com" target="_blank" rel="noopener">
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <h2>Muse</h2>
+            <p>AI that sees your screen and builds content for you</p>
+          </div>
+          <div class="detail">
+            <p>A desktop companion that watches the screen you are already working on and drafts the post, clip, or summary that belongs to it.</p>
+            <ul class="stack">
+              <li>Next.js</li>
+              <li>Electron</li>
+              <li>Claude API</li>
+              <li>Screen Capture</li>
+              <li>Postgres</li>
+            </ul>
+          </div>
+        </a>
+
+        <a class="cursor-target project left" data-r href="https://github.com/netiRussell/payloadCSUNAERO26" target="_blank" rel="noopener">
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <h2>CSUNAero Computer Vision</h2>
+            <p>Object detection for payload delivery and capture</p>
+          </div>
+          <div class="detail">
+            <p>Onboard detection for a competition UAV: it finds the target on the ground, holds the lock through the descent, and calls the drop.</p>
+            <ul class="stack">
+              <li>Python</li>
+              <li>OpenCV</li>
+              <li>YOLO</li>
+              <li>PyTorch</li>
+              <li>Raspberry Pi</li>
+            </ul>
+          </div>
+        </a>
+
+        <article class="cursor-target project right" data-r>
+          <div class="frame"><div class="frame-in"></div></div>
+          <div class="meta">
+            <h2>Slate</h2>
+            <p>Notebook</p>
+          </div>
+          <div class="detail">
+            <p>A notebook that stays out of the way — plain text first, structure only where the writing asks for it.</p>
+            <ul class="stack">
+              <li>React</li>
+              <li>TypeScript</li>
+              <li>IndexedDB</li>
+              <li>Tiptap</li>
+            </ul>
           </div>
         </article>
 
-        <article class="project right" data-r>
+        <article class="cursor-target project left" data-r>
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">02</span>
-            <h2>Marrow</h2>
-            <p>Editorial system</p>
+            <h2>Flare</h2>
+            <p>Fire learning and risk estimation</p>
+          </div>
+          <div class="detail">
+            <p>Wildfire risk read off terrain, weather, and burn history, scored as a map you can scrub through by date.</p>
+            <ul class="stack">
+              <li>Python</li>
+              <li>scikit-learn</li>
+              <li>GeoPandas</li>
+              <li>Mapbox</li>
+              <li>FastAPI</li>
+            </ul>
           </div>
         </article>
 
-        <article class="project left" data-r>
+        <article class="cursor-target project right" data-r>
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">03</span>
-            <h2>Halcyon</h2>
-            <p>Product interface</p>
+            <h2>Minima List</h2>
+            <p>Frictionless Android app</p>
+          </div>
+          <div class="detail">
+            <p>A to-do app with one screen and no settings: open it, type, swipe. Nothing between the thought and the list.</p>
+            <ul class="stack">
+              <li>Kotlin</li>
+              <li>Jetpack Compose</li>
+              <li>Room</li>
+              <li>Android</li>
+            </ul>
           </div>
         </article>
 
-        <article class="project right" data-r>
-          <div class="frame"><div class="frame-in"></div></div>
-          <div class="meta">
-            <span class="num">04</span>
-            <h2>Verity</h2>
-            <p>Brand &amp; motion</p>
+        <a class="cursor-target project left" data-r href="https://bsffr.vercel.app/" target="_blank" rel="noopener">
+          <div class="frame has-shots">
+            <!-- The round in order: the door, the vote, the reveal. -->
+            <div class="shots">
+              <img src="assets/bsffr/01-landing.webp" alt="BSFFR title screen, with create lobby and join lobby.">
+              <img src="assets/bsffr/02-vote.webp" alt="A voting round: one question, every player's one-word answer, and a timer.">
+              <img src="assets/bsffr/03-reveal.webp" alt="The reveal: the imposter caught, both questions shown, and the round scored.">
+            </div>
           </div>
-        </article>
+          <div class="meta">
+            <h2>BSFFR</h2>
+            <p>Multiplayer social deduction game</p>
+          </div>
+          <div class="detail">
+            <p>Social deduction for a lobby of strangers — hidden roles, timed rounds, and a vote that everyone watches resolve at once.</p>
+            <ul class="stack">
+              <li>Next.js</li>
+              <li>TypeScript</li>
+              <li>Socket.IO</li>
+              <li>Redis</li>
+              <li>Vercel</li>
+            </ul>
+          </div>
+        </a>
 
-        <article class="project left" data-r>
+        <a class="cursor-target project right" data-r href="https://www.edwardharutunian.com/" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">05</span>
-            <h2>Solene</h2>
-            <p>Commerce</p>
+            <h2>edwardharutunian.com</h2>
+            <p>Writer website &amp; editor</p>
           </div>
-        </article>
+          <div class="detail">
+            <p>A writer’s home on the web, with an editor behind it that lets the work be published without touching the code.</p>
+            <ul class="stack">
+              <li>Next.js</li>
+              <li>Payload CMS</li>
+              <li>Postgres</li>
+              <li>Vercel</li>
+            </ul>
+          </div>
+        </a>
 
-        <article class="project right" data-r>
+        <a class="cursor-target project left" data-r href="https://www.commonappcoach.com/" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">06</span>
-            <h2>Northline</h2>
-            <p>Art direction</p>
+            <h2>Common App Coach</h2>
+            <p>AI feedback on college applications</p>
           </div>
-        </article>
+          <div class="detail">
+            <p>Reads a college essay the way an admissions reader would, then says plainly where it loses them and why.</p>
+            <ul class="stack">
+              <li>Next.js</li>
+              <li>Claude API</li>
+              <li>TypeScript</li>
+              <li>Supabase</li>
+              <li>Stripe</li>
+            </ul>
+          </div>
+        </a>
 
-        <article class="project left" data-r>
+        <a class="cursor-target project right" data-r href="https://echo-location.vercel.app/" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
-            <span class="num">07</span>
-            <h2>Cairn</h2>
-            <p>Wayfinding</p>
+            <h2>Echolocation</h2>
+            <p>Real-time audio tracking concept</p>
           </div>
-        </article>
-
-        <article class="project right" data-r>
-          <div class="frame"><div class="frame-in"></div></div>
-          <div class="meta">
-            <span class="num">08</span>
-            <h2>Lorne</h2>
-            <p>Publication</p>
+          <div class="detail">
+            <p>Position from sound alone: a handful of microphones, the delay between them, and a room mapped in real time.</p>
+            <ul class="stack">
+              <li>Web Audio API</li>
+              <li>JavaScript</li>
+              <li>WebRTC</li>
+              <li>Canvas API</li>
+            </ul>
           </div>
-        </article>
-
-        <article class="project left" data-r>
-          <div class="frame"><div class="frame-in"></div></div>
-          <div class="meta">
-            <span class="num">09</span>
-            <h2>Ember</h2>
-            <p>Campaign</p>
-          </div>
-        </article>
-
-        <article class="project right" data-r>
-          <div class="frame"><div class="frame-in"></div></div>
-          <div class="meta">
-            <span class="num">10</span>
-            <h2>Sable</h2>
-            <p>Studio site</p>
-          </div>
-        </article>
+        </a>
 
       </section>
 
       <section class="outro">
         <p class="eyebrow" data-r>Currently taking on new work</p>
-        <a class="cta" href="mailto:yerazikboghozian@gmail.com" data-r>
+        <a class="cta cursor-target" href="mailto:yerazikboghozian@gmail.com" data-r>
           <span>Work with me</span>
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
@@ -294,5 +447,6 @@
 </div>
 
 <script src="main.js" defer></script>
+<script src="target-cursor.js" defer></script>
 </body>
 </html>

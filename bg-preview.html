@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>background.svg preview</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{ margin:0; height:100%; background:#e9e6e0; }
+  /* same treatment the site gives it: cover, centred */
+  #stage{
+    position:fixed; inset:0;
+    background:url("background.svg") center / cover no-repeat;
+  }
+  /* whole-artwork view, letterboxed, for checking the composition */
+  body.whole #stage{ background-size:contain; }
+
+  .hud{
+    position:fixed; left:12px; bottom:12px; z-index:2;
+    font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    color:#111; background:rgba(255,255,255,.72);
+    padding:8px 10px; border-radius:6px;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  }
+  .hud button{ font:inherit; cursor:pointer; margin-right:6px; }
+</style>
+<div id="stage"></div>
+<div class="hud">
+  <button onclick="document.body.classList.toggle('whole')">cover / whole</button>
+  <button onclick="location.reload(true)">reload</button>
+  <span id="mode">cover</span>
+</div>
+<script>
+  var m = document.getElementById('mode');
+  new MutationObserver(function(){
+    m.textContent = document.body.classList.contains('whole') ? 'whole' : 'cover';
+  }).observe(document.body, { attributes:true, attributeFilter:['class'] });
+</script>

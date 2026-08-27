@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="4881" height="8623"
+     viewBox="0 0 4881 8623" preserveAspectRatio="xMidYMid slice" fill="none">  <!--
+       The cast window shadow alone - no wall behind it.
+
+       This is background.svg with the cream field taken out, so every shape
+       left is something the light is blocked by. Laid over the wall photo
+       with mix-blend-mode:multiply, the greys darken whatever is underneath
+       instead of painting over it, which is what a real shadow does.
+
+       Blur radii and geometry are identical to background.svg; if that file
+       is re-exported, re-derive this one from it rather than editing both.
+  -->
+  <defs>
+    <filter id="soft-frame" x="-25%" y="-25%" width="150%" height="150%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="46"/>
+    </filter>
+    <filter id="soft-wedge" x="-25%" y="-25%" width="150%" height="150%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="88"/>
+    </filter>
+    <filter id="soft-floor" x="-25%" y="-25%" width="150%" height="150%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="62"/>
+    </filter>
+  </defs>
+
+  <!-- floor / ledge plane where the wall turns away from the light -->
+  <g filter="url(#soft-floor)">
+    <path d="M4881 8622.5V8084L1097 8622.5H4881Z" fill="#D6D2C7" stroke="#CAC5BC"/>
+    <path d="M4889 7987.65L911.551 8625.89L4013 7964.87L4889 7930.38L4889 7987.65Z"
+          fill="#D6D2C7" stroke="#CAC5BC"/>
+    <path d="M3545.5 8048.77L422.867 8171.71L444.051 8709.8L3545.5 8048.77Z"
+          stroke="#CAC5BC"/>
+  </g>
+
+  <!-- window frame bars -->
+  <g filter="url(#soft-frame)">
+    <rect x="3531" y="334" width="358" height="7484" fill="#CBC5BD"/>
+    <rect x="3531" y="334" width="358" height="7484" fill="#CCC7BF"/>
+    <rect x="6006.74" y="5601.41" width="146" height="7346"
+          transform="rotate(119 6006.74 5601.41)" fill="#CBC5BD"/>
+    <rect x="6006.74" y="5601.41" width="146" height="7346"
+          transform="rotate(119 6006.74 5601.41)" fill="#CCC7BF"/>
+    <line x1="20.0436" y1="7808" x2="4879" y2="7829.17"
+          stroke="#CCC7BF" stroke-opacity="0.46" stroke-width="20"/>
+    <line x1="20.0436" y1="7808" x2="4879" y2="7829.17"
+          stroke="#CCC7BF" stroke-opacity="0.46" stroke-width="20"/>
+  </g>
+
+  <!-- the long throw across the wall: darkest, so it sits on top -->
+  <g filter="url(#soft-wedge)">
+    <path d="M4880.5 0H305L4880.5 2581.5V0Z" fill="#CAC4BC"/>
+  </g>
+
+</svg>
