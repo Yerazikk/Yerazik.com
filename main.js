@@ -88,7 +88,7 @@
                                      // every frame - a static filter value
                                      // is what lets the browser skip
                                      // redoing the blur on a given frame
-  var TZ_RANGE_FACTOR = 0.55;       // fraction of viewport height (~55vh) -
+  var TZ_RANGE_FACTOR = 0.2;        // fraction of viewport height (~20vh) -
                                      // short on purpose, so a normal scroll
                                      // gesture slides straight through it
 
@@ -676,5 +676,99 @@
     applyVine();
     applyBranch();
     save();
+  });
+})();
+
+/* ---------------------------------------------------------------
+   Project shot galleries.
+
+   A .shots block with more than one <img> gets paged manually: a click
+   on the left/right half of its .frame steps the gallery, and so do the
+   arrow keys while the pointer is over that frame. Runs independent of
+   the smooth-scroll IIFE above so it still works under reduced motion.
+----------------------------------------------------------------*/
+(function () {
+  'use strict';
+
+  var galleries = [];   // { imgs, zones, i }
+  var hovered = null;   // the gallery currently under the pointer
+
+  function show(g, i) {
+    g.i = (i + g.imgs.length) % g.imgs.length;
+    for (var n = 0; n < g.imgs.length; n++) {
+      g.imgs[n].classList.toggle('current', n === g.i);
+    }
+  }
+
+  function step(g, dir) { show(g, g.i + dir); }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.shots'), function (shots) {
+    var imgs = shots.querySelectorAll('img');
+    if (imgs.length < 2) return;
+
+    var frame = shots.closest('.frame');
+    if (!frame) return;
+
+    var g = { imgs: imgs, i: 0 };
+    show(g, 0);
+    galleries.push(g);
+
+    var prev = document.createElement('div');
+    prev.className = 'shot-zone prev';
+    var next = document.createElement('div');
+    next.className = 'shot-zone next';
+    frame.appendChild(prev);
+    frame.appendChild(next);
+
+    function go(dir) {
+      return function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        step(g, dir);
+      };
+    }
+    prev.addEventListener('click', go(-1));
+    next.addEventListener('click', go(1));
+
+    frame.addEventListener('mouseenter', function () { hovered = g; });
+    frame.addEventListener('mouseleave', function () { if (hovered === g) hovered = null; });
+  });
+
+  if (!galleries.length) return;
+
+  window.addEventListener('keydown', function (e) {
+    if (!hovered) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.documentElement.classList.contains('dev-on')) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); step(hovered, -1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); step(hovered, 1); }
+  });
+})();
+
+
+/* ---------- the title is the link ----------
+
+   The bracket frames a project's title, so the title is what a click has
+   to land on. The card as a whole is still the <a> - that is what carries
+   the href, the hover, and the keyboard focus - but a click anywhere other
+   than the h2 is swallowed here, so brushing a screenshot or a caption no
+   longer opens the project. .meta h2 is inline-block (styles.css) so its
+   box is the type's own length rather than the full column.
+--------------------------------------------------------------------*/
+(function () {
+  'use strict';
+
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+
+    var card = t.closest('a.project');
+    if (!card) return;
+    if (t.closest('.meta h2')) return;      // on the title: let it through
+
+    e.preventDefault();
   });
 })();

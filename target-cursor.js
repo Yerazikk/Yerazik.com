@@ -2,8 +2,8 @@
    Target cursor - a vanilla port of the React/GSAP component.
 
    Same behaviour, no dependencies: a spinning bracket that snaps onto
-   a whole project (card, caption, and description together), the
-   wordmark, the mail button, or a nav link, lags behind the pointer
+   a project's title, the wordmark, the mail button, or a nav link,
+   lags behind the pointer
    while it sits inside (the "parallax"), and springs back on leave.
    One requestAnimationFrame loop, transforms only, no layout reads
    except a single getBoundingClientRect while a target is hot.
@@ -76,27 +76,41 @@
   function radius()   { return GRAVITY_RADIUS; }
   function stick()    { return GRAVITY_STICK; }
 
-  /* The element's own box, grown to swallow any `sel` it contains. */
-  function union(el, sel) {
-    var r = el.getBoundingClientRect();
-    var l = r.left, t = r.top, rr = r.right, b = r.bottom;
-    var kids = el.querySelectorAll(sel);
-    for (var i = 0; i < kids.length; i++) {
-      var k = kids[i].getBoundingClientRect();
-      if (!k.width && !k.height) continue;
-      if (k.left < l) l = k.left;
-      if (k.top < t) t = k.top;
-      if (k.right > rr) rr = k.right;
-      if (k.bottom > b) b = k.bottom;
-    }
-    return { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t };
+  /* Breathing room around a title, so the bracket sits off the type
+     rather than on it: generous at the sides, barely there above and
+     below - the line box already carries leading. */
+  var TITLE_PAD_X = 16;
+  var TITLE_PAD_Y = 4;
+
+  function grow(r, dx, dy) {
+    return {
+      left: r.left - dx, top: r.top - dy,
+      right: r.right + dx, bottom: r.bottom + dy,
+      width: r.width + dx * 2, height: r.height + dy * 2
+    };
   }
 
-  /* A project's box includes its description, so the bracket frames the
-     whole thing rather than just the picture. Everything else measures
-     as itself. */
+  /* What the bracket frames, and what it reaches for: a project is its
+     title alone - not the card, not the caption, not the description. The
+     h2 is inline-block, so its own rect is already the type's length, but
+     a Range over its contents is exact across a wrap. Everything else
+     measures as itself. */
   function rectFor(el) {
-    return el.classList.contains('project') ? union(el, '.detail') : el.getBoundingClientRect();
+    if (!el.classList.contains('project')) return el.getBoundingClientRect();
+
+    var h = el.querySelector('.meta h2');
+    if (!h) return el.getBoundingClientRect();
+
+    var r = null;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(h);
+      var rr = range.getBoundingClientRect();
+      range.detach && range.detach();
+      if (rr.width && rr.height) r = rr;
+    } catch (e) { /* fall through to the block box */ }
+
+    return grow(r || h.getBoundingClientRect(), TITLE_PAD_X, TITLE_PAD_Y);
   }
 
   /* ---------- bail out where a custom cursor is wrong ---------- */
@@ -381,8 +395,11 @@
     start();
   }, { passive: true });
 
+  // Under gravity the proximity sweep owns every latch. Without it, a
+  // mouseover anywhere on a project would grab the card from across the
+  // page - the opposite of reaching only for its title.
   window.addEventListener('mouseover', function (e) {
-    if (suspended) return;
+    if (suspended || CONFIG.gravity) return;
     var el = e.target && e.target.closest ? e.target.closest(selector()) : null;
     if (el) latch(el);
   }, { passive: true });

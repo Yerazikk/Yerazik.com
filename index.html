@@ -341,7 +341,7 @@
   <nav class="nav" aria-label="Primary">
     <a class="cursor-target" href="/">Home</a>
     <a class="cursor-target" href="resume.pdf" target="_blank" rel="noopener">Resume</a>
-    <a class="cursor-target" href="https://github.com/YOUR-USERNAME" target="_blank" rel="noopener">Github</a>
+    <a class="cursor-target" href="https://github.com/Yerazikk" target="_blank" rel="noopener">Github</a>
     <a class="cursor-target" href="https://www.linkedin.com/in/YOUR-USERNAME" target="_blank" rel="noopener">Linkedin</a>
 
     <!-- The light switch. Hidden until theme.js wires it up. -->
@@ -365,14 +365,24 @@
     <div class="inner">
 
       <section class="hero">
-        <h1 class="wordmark cursor-target" data-r><span class="wm-fx">Yerazik</span></h1>
+        <!-- Split per letter: the scroll tunnel flies each glyph apart on its own
+           timing (main.js). aria-label keeps it one word for a screen reader
+           instead of seven letters spelled out. -->
+        <h1 class="wordmark cursor-target" data-r aria-label="Yerazik"><span class="wm-fx" aria-hidden="true"><span class="wm-l">Y</span><span class="wm-l">e</span><span class="wm-l">r</span><span class="wm-l">a</span><span class="wm-l">z</span><span class="wm-l">i</span><span class="wm-l">k</span></span></h1>
         <p class="lede" data-r>beep boop beep boop</p>
       </section>
 
       <section class="work">
 
         <a class="cursor-target project left" data-r href="https://drawangulate.vercel.app/" target="_blank" rel="noopener">
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- The lobby, the prompt a round hands you, then the drawing itself. -->
+            <div class="shots">
+              <img src="assets/drawangulate/01-landing.webp" alt="Drawangulate's title screen: a prompt trio, the drawing someone made from it, and a lobby to create or join a game.">
+              <img src="assets/drawangulate/02-round.webp" alt="The start of a round: three prompt words weighted into a point on the triangle.">
+              <img src="assets/drawangulate/03-draw.webp" alt="A finished drawing mashing up the round's three prompts, with the drawing tools open beside it.">
+            </div>
+          </div>
           <div class="meta">
             <h2>Drawangulate</h2>
             <p>Multiplayer drawing game</p>
@@ -380,11 +390,12 @@
           <div class="detail">
             <p>A round-based drawing game for a room full of people: one prompt, everyone draws at once, and the guessing happens live as the strokes land.</p>
             <ul class="stack">
-              <li>Next.js</li>
+              <li>React</li>
               <li>TypeScript</li>
-              <li>WebSockets</li>
-              <li>Canvas API</li>
-              <li>Vercel</li>
+              <li>Vite</li>
+              <li>Konva</li>
+              <li>Socket.IO</li>
+              <li>Express</li>
             </ul>
           </div>
         </a>
@@ -393,22 +404,30 @@
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
             <h2>TenTal</h2>
-            <p>Ecommerce platform</p>
+            <p>Online education platform</p>
           </div>
           <div class="detail">
-            <p>A storefront and the shop behind it: catalog, cart, and checkout in one place, with inventory and orders handled from the same admin.</p>
+            <p>A place to find an independent tutor and actually start: browse who teaches what, book a slot, pay, and get the Zoom link back in the same flow.</p>
             <ul class="stack">
               <li>Next.js</li>
+              <li>React</li>
               <li>TypeScript</li>
-              <li>Postgres</li>
+              <li>Supabase</li>
+              <li>Tailwind</li>
               <li>Stripe</li>
-              <li>Vercel</li>
             </ul>
           </div>
         </article>
 
         <a class="cursor-target project left" data-r href="https://use-muse.com" target="_blank" rel="noopener">
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- Watch it watch your screen, ask it something, get nudged back on track. -->
+            <div class="shots">
+              <img src="assets/muse/01-livestream.webp" alt="The livestream view: Muse recording a screen and logging what it's noticing in real time.">
+              <img src="assets/muse/02-chat.webp" alt="Muse answering application essay questions, drawing on what it watched you write and do earlier.">
+              <img src="assets/muse/03-focus.webp" alt="Focus Mode settings next to a nudge Muse sent after noticing the screen had drifted off task.">
+            </div>
+          </div>
           <div class="meta">
             <h2>Muse</h2>
             <p>AI that sees your screen and builds content for you</p>
@@ -426,36 +445,51 @@
         </a>
 
         <a class="cursor-target project right" data-r href="https://github.com/netiRussell/payloadCSUNAERO26" target="_blank" rel="noopener">
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- The robot the firmware runs on, then the repo it lives in. -->
+            <div class="shots">
+              <img src="assets/payload/01-robot.webp" alt="The payload robot up close: a green target cylinder on its bay beside the lit camera ring and wiring behind the 3D-printed frame.">
+              <img src="assets/payload/02-repo.webp" alt="The payloadCSUNAERO26 repository on GitHub, with the firmware sources, the viewer script and the README below them.">
+            </div>
+          </div>
           <div class="meta">
             <h2>CSUNAero Computer Vision</h2>
-            <p>Object detection for payload delivery and capture</p>
+            <p>Vision-guided autonomous payload robot</p>
           </div>
           <div class="detail">
-            <p>Onboard detection for a competition UAV: it finds the target on the ground, holds the lock through the descent, and calls the drop.</p>
+            <p>Firmware for an SAE Aero Design payload robot: the onboard camera tracks colored blobs to pick the target out from the obstacles, and the robot drives itself the rest of the way.</p>
             <ul class="stack">
+              <li>ESP32-S3</li>
+              <li>C++</li>
+              <li>Arduino</li>
+              <li>Computer Vision</li>
               <li>Python</li>
-              <li>OpenCV</li>
-              <li>YOLO</li>
-              <li>PyTorch</li>
-              <li>Raspberry Pi</li>
             </ul>
           </div>
         </a>
 
         <article class="cursor-target project left" data-r>
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- The way in, a musing open in the notebook, then the Muse beside it. -->
+            <div class="shots">
+              <img src="assets/slate/01-landing.webp" alt="Slate's landing page - &quot;Breathe life into your every thought&quot; - with a sign-up card over a nebula.">
+              <img src="assets/slate/02-notebook.webp" alt="A musing open in the notebook: a weekly metrics table and notes beside the day's other entries.">
+              <img src="assets/slate/03-muse.webp" alt="The Muse view asking &quot;Hi Dev, what's on your mind?&quot; above a prompt box, noting chats are not saved.">
+            </div>
+          </div>
           <div class="meta">
             <h2>Slate</h2>
             <p>Notebook</p>
           </div>
           <div class="detail">
-            <p>A notebook that stays out of the way — plain text first, structure only where the writing asks for it.</p>
+            <p>A notebook that stays out of the way — plain text first, structure only where the writing asks for it, in whichever language you keep your notes in.</p>
             <ul class="stack">
               <li>React</li>
               <li>TypeScript</li>
-              <li>IndexedDB</li>
-              <li>Tiptap</li>
+              <li>Lexical</li>
+              <li>Clerk</li>
+              <li>FastAPI</li>
+              <li>Postgres</li>
             </ul>
           </div>
         </article>
@@ -509,36 +543,51 @@
             <p>Multiplayer social deduction game</p>
           </div>
           <div class="detail">
-            <p>Social deduction for a lobby of strangers — hidden roles, timed rounds, and a vote that everyone watches resolve at once.</p>
+            <p>Social deduction for a lobby of strangers — everyone answers the prompt with an emoji, the imposter bluffs, and the vote resolves in front of the whole room.</p>
             <ul class="stack">
-              <li>Next.js</li>
-              <li>TypeScript</li>
+              <li>Node</li>
+              <li>Express</li>
               <li>Socket.IO</li>
-              <li>Redis</li>
-              <li>Vercel</li>
+              <li>JavaScript</li>
+              <li>HTML</li>
+              <li>CSS</li>
             </ul>
           </div>
         </a>
 
         <a class="cursor-target project left" data-r href="https://www.edwardharutunian.com/" target="_blank" rel="noopener">
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- The book the site opens on, the archive of published work, then the editor behind it. -->
+            <div class="shots">
+              <img src="assets/edward/01-home.webp" alt="The site's home page: a featured translation, its cover, and the opening of the text beside it.">
+              <img src="assets/edward/02-articles.webp" alt="The Articles archive: essays and translations listed by issue and season, each with its journal cover.">
+              <img src="assets/edward/03-editor.webp" alt="The hidden editor's Write New Essay form, with per-language title fields and publication metadata.">
+            </div>
+          </div>
           <div class="meta">
             <h2>edwardharutunian.com</h2>
             <p>Writer website &amp; editor</p>
           </div>
           <div class="detail">
-            <p>A writer’s home on the web, with an editor behind it that lets the work be published without touching the code.</p>
+            <p>A writer’s home on the web, with a hidden admin editor behind it that lets the work be published without touching the code.</p>
             <ul class="stack">
-              <li>Next.js</li>
-              <li>Payload CMS</li>
-              <li>Postgres</li>
-              <li>Vercel</li>
+              <li>React</li>
+              <li>TypeScript</li>
+              <li>Vite</li>
+              <li>Supabase</li>
+              <li>Vercel Functions</li>
             </ul>
           </div>
         </a>
 
         <a class="cursor-target project right" data-r href="https://www.commonappcoach.com/" target="_blank" rel="noopener">
-          <div class="frame"><div class="frame-in"></div></div>
+          <div class="frame">
+            <!-- The offer it opens with, then what it asks for before reading. -->
+            <div class="shots">
+              <img src="assets/commonappcoach/01-landing.webp" alt="The landing page - &quot;I'll roast your college apps for free&quot; - over a marked-up essay scored 7.0 for impact.">
+              <img src="assets/commonappcoach/02-intake.webp" alt="Step two of intake: activities and achievements, a resume drop zone, and profile links.">
+            </div>
+          </div>
           <div class="meta">
             <h2>Common App Coach</h2>
             <p>AI feedback on college applications</p>
