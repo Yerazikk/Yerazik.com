@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-theme-lock>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -13,21 +13,21 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap">
 <!-- shares the site's tokens, sans stack and target-cursor styling -->
 <link rel="stylesheet" href="styles.css">
+<!-- data-theme-lock above: there is no daylight version of being lost,
+     so this page opts out of the switch and pins the night palette. -->
+<script src="theme.js"></script>
 <style>
 /* ---------------------------------------------------------------
    404 - the same wall after dark. The photo carries the whole page,
    so everything here is type placed into the room's empty corner:
    open wall upper-left, streetlamp upper-right, plant below.
-----------------------------------------------------------------*/
 
-:root{
-  --ink:#f2efe8;
-  --ground:#0d0f12;
-  /* The bracket's latch colour. target-cursor.js writes this inline on
-     :root, so the override has to shout; the site's purple belongs to
-     the daylight page, and this room is lit by a sodium lamp. */
-  --tc-color-on:#f2e3a4 !important;
-}
+   The colours are not this page's own any more: the site's dark
+   palette IS this room, so --ink, --ground and the sodium latch all
+   come from styles.css via data-theme="dark" on <html>. What is left
+   here is only what is peculiar to a 404 - the full-bleed crop of
+   the photo, the wash that opens its left third, and the type curve.
+----------------------------------------------------------------*/
 
 body{
   color:var(--ink);
@@ -65,14 +65,12 @@ body{
     linear-gradient(to top, rgba(8,10,13,.5), rgba(8,10,13,0) 38%);
 }
 
-/* The home page's tooth, inverted for a dark room: the same 3px dot
-   grid, drawn in light instead of black so it reads over the photo. */
+/* The home page's tooth. The dark palette already draws it in light
+   rather than black (--grain-ink), so all this does is pin it to the
+   viewport and lift it over the photo. */
 .lost .grain{
   position:fixed;
   z-index:1;
-  opacity:.55;
-  background-image:radial-gradient(rgba(255,255,255,.075) .5px, transparent .5px);
-  background-size:3px 3px;
 }
 
 .lost-in{
@@ -111,17 +109,13 @@ body{
   opacity:.74;
 }
 
-/* The site's pill, inverted for a dark room */
+/* The site's pill already reads the palette, so it needs nothing here
+   but its place on the page - and a little more edge than the dark
+   --rule gives it, because it sits over a photograph rather than a wall. */
 .lost .cta{
   margin-top:clamp(2rem,5vh,3rem);
   border-color:rgba(242,239,232,.5);
-  color:var(--ink);
 }
-.lost .cta::before{ background:var(--ink); }
-@media (hover:hover){
-  .lost .cta:hover{ color:#0d0f12; }
-}
-.lost .cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
 
 /* On a phone the portrait photo fills the screen properly on its own,
    so the wash pulls back to a plain top-down scrim. */

@@ -62,8 +62,8 @@
      grabbable regardless since they're the opening pose and the only
      other real controls on the page. */
 
-  var TARGET_SEL = '.project, .wordmark, .cta, .nav a';
-  var TARGET_SEL_NO_WORDMARK = '.project, .cta, .nav a';
+  var TARGET_SEL = '.project, .wordmark, .cta, .nav a, .theme-switch';
+  var TARGET_SEL_NO_WORDMARK = '.project, .cta, .nav a, .theme-switch';
   var GRAVITY_RADIUS = 100;  // px outside the box where the pull begins
   var GRAVITY_STICK  = CONFIG.gravityStick;
 

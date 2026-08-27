@@ -38,9 +38,16 @@
   // width, so the scene is shown whole rather than cropped to a middle band -
   // the extra height is what the parallax pans through. Add an entry here if
   // the artwork is replaced.
+  //
+  // `dark` is the night exposure of the same wall. 404.jpg is the identical
+  // frame shot after dark - same window, same plant, 768x1365 against
+  // 736x1308, which is the same ratio to three decimals - so the shadow
+  // layer and the plant rig stay registered across the switch and only the
+  // values move. The drawn wall has no night export; styles.css inverts it
+  // instead (--wall-filter), so it points at itself here.
   var BG_SRC = [
-    { id: 'jpg', file: 'temp.jpg',       aspect:  736 / 1308 },
-    { id: 'svg', file: 'background.svg', aspect: 4881 / 8623 }
+    { id: 'jpg', file: 'temp.jpg',       dark: '404.jpg',        aspect:  736 / 1308 },
+    { id: 'svg', file: 'background.svg', dark: 'background.svg', aspect: 4881 / 8623 }
   ];
   var bgSrc = 0;
   var BG_ASPECT = BG_SRC[0].aspect;
@@ -299,7 +306,9 @@
 
   var plant = { x: -24, y: 1520, r: 0 };
   var vine  = { x: 48, y: -1616, r: 379 };   // the top-right vine, on the arrows / O
-  var branch = { x: 0, y: 0, r: 0 };         // the top-left branch, on YGHJ / U
+  // -1520 cancels --plant-y: .branch hangs inside .plants and inherits its
+  // offset, so 0 parked it a viewport and a half below the fold.
+  var branch = { x: 0, y: -1520, r: 0 };     // the top-left branch, on YGHJ / U
   var PLANT_STEP = 8;   // px per tap (1 with shift)
   var PLANT_TURN = 1;   // deg per tap
 
@@ -366,7 +375,14 @@
 
   function applyBg() {
     var src = BG_SRC[bgSrc];
-    root.style.setProperty('--bg-img', 'url("' + src.file + '")');
+    var dark = root.getAttribute('data-theme') === 'dark';
+    var file = (dark && src.dark) || src.file;
+    // This is an inline write on :root, which outranks the palette's
+    // --bg-img - so once main.js has spoken it owns the token, and it has
+    // to re-speak on every theme change (see the listener below).
+    root.style.setProperty('--bg-img', 'url("' + file + '")');
+    // Only the drawn wall gets recoloured for night; the photo swaps outright.
+    bg.classList.toggle('drawn-wall', src.id === 'svg');
     BG_ASPECT = src.aspect;
     var out = dev && dev.querySelector('#v-bgsrc');
     if (out) out.textContent = src.file;
@@ -380,6 +396,11 @@
     applyBg();
     save();
   }
+
+  // Lights on / off: re-point the wall at the other exposure. Nothing else
+  // has to move - both files are the same frame at the same ratio, so the
+  // measured box, the parallax range and the plant rig are all still valid.
+  document.addEventListener('theme:change', applyBg);
 
   function devOpen() { return !!dev && dev.style.display !== 'none'; }
 
@@ -588,7 +609,7 @@
       });
       plant.x = -24; plant.y = 1520; plant.r = 0; applyPlant();
       vine.x = 48; vine.y = -1616; vine.r = 379; applyVine();
-      branch.x = 0; branch.y = 0; branch.r = 0; applyBranch();
+      branch.x = 0; branch.y = -1520; branch.r = 0; applyBranch();
       wmIdx = 0; applyWm();
       bgSrc = 0; applyBg();
       zoom = 1; BG_RATE = 0.28; EASE = 0.07; tzMax = TZ_MAX_DEFAULT;

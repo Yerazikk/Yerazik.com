@@ -4,8 +4,10 @@
 ----------------------------------------------------------------*/
 
 :root{
-  --ink: #000;
-  --rule: rgba(0,0,0,.22);
+  /* Every colour in the page lives in the two palette blocks near the
+     bottom of this section (":root" for daylight, "[data-theme=dark]"
+     for after dark). Nothing below the palettes should name a colour
+     literal - if a rule needs one, it needs a token. */
 
   /* The two knobs dev mode (press T) edits live */
   --pad: 12.1vw;                        /* breathing room at the screen edges */
@@ -20,11 +22,8 @@
   --wm-scale: 1.06;
   --wm-ls: .005em;
   --wm-weight: 400;
-  --bg-img: url("temp.jpg");            /* the wall itself; dev mode (B) swaps
-                                           it for background.svg */
   --shadow-img: url("shadows.svg");     /* the cast window shadow, multiplied
                                            over the wall above */
-  --shadow-strength: 1;                 /* 0 hides the cast shadow entirely */
 
   /* Plant-shadow placement, driven by WASD / R in dev mode (press T) */
   --plant-x: -24px;
@@ -32,9 +31,16 @@
   --plant-rot: 0deg;
 
   /* The top-left branch - the bottom mass flipped over - on YGHJ / U in
-     dev mode */
-  --branch-x: 0px;
-  --branch-y: 0px;
+     dev mode.
+
+     .branch lives inside .plants, so it inherits that rig's offset - and
+     --plant-y is 1520px, a viewport and a half down the page. The vine
+     next to it has always carried a --vine-y that cancels this (-1616px);
+     the branch never got tuned, so at 0 it was not "at the top left", it
+     was parked well below the fold and had never once been on screen.
+     -1128px puts it back near the top of the first viewport. */
+  --branch-x: -40px;
+  --branch-y: -1128px;
   --branch-rot: 0deg;
 
   /* The top-right vine has its own rig, driven by the arrow keys / O */
@@ -45,7 +51,6 @@
                                            box already matches the photo's
                                            portrait ratio, so 1 shows it whole;
                                            <1 pulls back, >1 crops in */
-  --ground: #e9e6e0;                    /* shows either side of the image */
 
   --zoom: 1;                            /* dev-only virtual-viewport scale */
 
@@ -56,7 +61,117 @@
   --ease: cubic-bezier(.22,1,.36,1);
   --sans: "Helvetica Neue", Helvetica, -apple-system, BlinkMacSystemFont,
           "Segoe UI", Inter, Arial, sans-serif;
+
+  /* =========================================================
+     PALETTE - daylight (the default)
+
+     Four in the afternoon: cream wall, black type, sun through
+     the window on the right, plant shadows thrown warm.
+  ========================================================== */
+
+  --ink:   #000;                        /* type */
+  --rule:  rgba(0,0,0,.22);             /* hairlines, frames, focus rings */
+  --ground:#e9e6e0;                     /* shows either side of the image */
+
+  /* The wall photo. theme.js/main.js re-point this at the night
+     exposure; the drawn fallback below shows wherever the zoomed
+     photo does not reach. */
+  --bg-img: url("temp.jpg");
+  --wall:
+    radial-gradient(128% 104% at 20% 26%,
+      #ece7dc 0%, #e7e1d4 46%, #e1dbcc 78%, #dcd6c6 100%)
+    #e5dfd3;
+
+  --shadow-strength: 1;                 /* 0 hides the cast shadow entirely */
+  --wall-filter: none;                  /* only the drawn (dev) wall uses this */
+  --wall-lift: none;                    /* see the note in the dark palette */
+  --photo-filter: none;
+
+  --plant-ink:  #a79d86;                /* the moving leaf shadows */
+  --plant-blend: multiply;
+
+  --veil-a: rgba(238,236,231,.18);      /* the barely-there lift under type */
+  --veil-b: rgba(238,236,231,.06);
+  --veil-c: rgba(238,236,231,.22);
+  --grain-ink: rgba(0,0,0,.05);         /* 1px of tooth */
+  --grain-opacity: .5;
+
+  --frame-fill: rgba(255,255,255,.16);  /* the mat a project sits in */
+  --frame-in:   #fff;                   /* placeholder print */
+  --on-ink:     #fff;                   /* type once --ink is the fill */
+
+  --latch: #B497CF;                     /* the cursor bracket's colour */
 }
+
+/* =========================================================
+   PALETTE - after dark
+
+   The same wall, same window, same plant - 404.jpg is the night
+   exposure of the identical frame, so every layer above it stays
+   in register and only the values move. The shadows go cool and
+   pull back (there is far less light left to block), the type
+   flips to the wall's own paper white, and the bracket picks up
+   the sodium lamp instead of the daylight purple.
+========================================================== */
+
+:root[data-theme="dark"]{
+  --ink:   #f2efe8;
+  --rule:  rgba(242,239,232,.24);
+  --ground:#0d0f12;
+
+  --bg-img: url("404.jpg");
+  --wall:
+    radial-gradient(128% 104% at 20% 26%,
+      #2b2f31 0%, #23272a 46%, #1b1f22 78%, #14181b 100%)
+    #171b1e;
+
+  /* Multiplying a mid-grey over an already-dark wall crushes fast,
+     so the cast window shadow is dialled back to about half. */
+  --shadow-strength: .5;
+  /* The drawn wall (dev's B toggle) has no night export; invert it
+     rather than ship a second copy of the same geometry. */
+  --wall-filter: invert(1) hue-rotate(180deg) saturate(.45) brightness(.62);
+
+  /* Un-crushing the top-right corner.
+
+     A shadow is a subtraction, so it needs something to subtract from,
+     and the night exposure's top-right corner is down at about 5%
+     luminance - the vine that hangs there was multiplying against black
+     and coming out as nothing at all. Rather than lighten the whole wall
+     (which stops reading as night), this puts the corner's tone back
+     where the photographer's vignette took it: a soft haze over that one
+     corner, plus a tenth of a stop across the frame. Both leaf masses
+     then have wall to fall on. Raise the .34 if they still read thin. */
+  --wall-lift:
+    radial-gradient(78% 62% at 92% 0%,
+      rgba(122,136,146,.34), rgba(122,136,146,0) 72%);
+  --photo-filter: brightness(1.1);
+
+  /* Still multiply, still a shadow. Screening a light value here was
+     tried and is wrong: it makes the leaves glow rather than fall, which
+     is a plant lit from the front, not a shadow cast on a wall. What the
+     leaves needed was not a different blend but a wall dark enough to
+     take one - see --wall-lift above. Cooler and lighter than daylight's
+     ink, because the light throwing it is a streetlamp, not the sun. */
+  --plant-ink:  #3a4247;
+  --plant-blend: multiply;
+
+  --veil-a: rgba(8,10,13,.22);
+  --veil-b: rgba(8,10,13,.06);
+  --veil-c: rgba(8,10,13,.30);
+  --grain-ink: rgba(255,255,255,.075);
+  --grain-opacity: .55;
+
+  --frame-fill: rgba(242,239,232,.05);
+  --frame-in:   rgba(242,239,232,.10);
+  --on-ink:     #0d0f12;
+
+  --latch: #f2e3a4;
+}
+
+/* target-cursor.js writes --tc-color-on inline on :root, and inline
+   beats any selector - so the palette has to shout to be heard. */
+:root{ --tc-color-on: var(--latch) !important; }
 
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
 
@@ -106,10 +221,6 @@ body{
   pointer-events:none;
   /* the drawn wall shows wherever the zoomed photo does not reach */
   background:var(--wall);
-  --wall:
-    radial-gradient(128% 104% at 20% 26%,
-      #ece7dc 0%, #e7e1d4 46%, #e1dbcc 78%, #dcd6c6 100%)
-    #e5dfd3;
 
   --bar: 5.6vmax;                         /* frame thickness, pre-blur */
   --tilt: 11deg;                          /* sun angle; see the media queries */
@@ -124,9 +235,20 @@ body{
   content:"";
   position:absolute;
   inset:0;
-  background:var(--bg-img) center / cover no-repeat;
+  /* --wall-lift is a layer in front of the photo, not a filter on it:
+     it puts tone back into the corner the night exposure crushed. It is
+     `none` in daylight, so this is one background layer that paints
+     nothing. */
+  background:var(--wall-lift), var(--bg-img) center / cover no-repeat;
+  filter:var(--photo-filter);
   transform:scale(var(--bg-zoom));
   transform-origin:50% 50%;
+}
+/* The drawn wall is recoloured for night instead of swapped, and it has
+   no crushed corner to repair - so it takes the invert and skips the lift. */
+.bg.drawn-wall::before{
+  background:var(--bg-img) center / cover no-repeat;
+  filter:var(--wall-filter);
 }
 
 /* The cast window shadow, laid over the wall rather than baked into it.
@@ -203,8 +325,8 @@ body{
 .plants{
   left:0; right:0; top:0; bottom:auto;
   height:calc(100svh / var(--zoom));
-  color:#a79d86;
-  mix-blend-mode:multiply;
+  color:var(--plant-ink);
+  mix-blend-mode:var(--plant-blend);
   /* dev mode nudges these three; the leaves animate inside them */
   transform:translate3d(var(--plant-x), var(--plant-y), 0) rotate(var(--plant-rot));
   transform-origin:14% 86%;
@@ -361,8 +483,8 @@ body{
 .branch{
   left:0; right:0; top:0; bottom:auto;
   height:calc(100svh / var(--zoom));
-  color:#a79d86;
-  mix-blend-mode:multiply;
+  color:var(--plant-ink);
+  mix-blend-mode:var(--plant-blend);
   transform:translate3d(var(--branch-x), var(--branch-y), 0) rotate(var(--branch-rot));
   transform-origin:10% 8%;
 }
@@ -460,13 +582,14 @@ body{
 .veil{
   position:absolute; inset:0; z-index:1; pointer-events:none;
   background:linear-gradient(to bottom,
-    rgba(238,236,231,.18), rgba(238,236,231,.06) 45%, rgba(238,236,231,.22));
+    var(--veil-a), var(--veil-b) 45%, var(--veil-c));
 }
 
 /* 1px of tooth - pure CSS, no image request */
 .grain{
-  position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.5;
-  background-image:radial-gradient(rgba(0,0,0,.05) .5px, transparent .5px);
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  opacity:var(--grain-opacity);
+  background-image:radial-gradient(var(--grain-ink) .5px, transparent .5px);
   background-size:3px 3px;
 }
 
@@ -539,12 +662,69 @@ body{
   padding-inline:.5em;
   margin-block:-.5em;
   margin-inline:-.5em;
-  transition:opacity .3s var(--ease), filter .2s ease;
+  transition:opacity .3s var(--ease), filter .2s ease, color .28s linear;
 }
 @media (hover:hover){
   .nav a:hover{ opacity:1; }
 }
 .nav a:focus-visible{ outline:1px solid var(--rule); outline-offset:6px; }
+
+/* --- the light switch ---
+
+   Sits at the end of the nav, past the links. Both glyphs are always
+   in the DOM, stacked; the theme decides which one is up, so the swap
+   is a cross-fade and a quarter turn rather than a repaint. It ships
+   hidden and theme.js unhides it - a switch that cannot be thrown is
+   worse than no switch. */
+
+.theme-switch[hidden]{ display:none; }   /* class beats the UA's [hidden] */
+.theme-switch{
+  /* line the glyph up on the links' cap height rather than their box */
+  align-self:center;
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:2.25rem; height:2.25rem;
+  margin-block:-.5em;
+  margin-inline:-.4rem -.55rem;
+  border:0;
+  background:none;
+  color:var(--ink);
+  opacity:.78;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:opacity .3s var(--ease), color .28s linear;
+}
+@media (hover:hover){
+  .theme-switch:hover{ opacity:1; }
+}
+.theme-switch:focus-visible{ outline:1px solid var(--rule); outline-offset:4px; }
+
+.theme-switch svg{
+  grid-area:1 / 1;
+  width:1.15rem; height:1.15rem;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  transition:opacity .32s var(--ease), transform .5s var(--ease);
+}
+/* Daylight showing: offer the moon. After dark: offer the sun. */
+.theme-switch .i-sun { opacity:0; transform:rotate(-70deg) scale(.6); }
+.theme-switch .i-moon{ opacity:1; transform:none; }
+[data-theme="dark"] .theme-switch .i-sun { opacity:1; transform:none; }
+[data-theme="dark"] .theme-switch .i-moon{ opacity:0; transform:rotate(70deg) scale(.6); }
+
+/* The palette cuts, the type cross-fades. A light switch is instant and
+   the wall photo cannot tween anyway, but snapping the type from black
+   to paper in one frame reads as a glitch rather than a switch. */
+body,
+.frame, .frame::after, .frame-in,
+.stack li{
+  transition:color .28s linear, background-color .28s linear,
+             border-color .28s linear;
+}
 
 /* ---------- hero ---------- */
 
@@ -634,7 +814,7 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   position:relative;
   aspect-ratio:4/3;
   border:1px solid var(--rule);
-  background:rgba(255,255,255,.16);
+  background:var(--frame-fill);
   overflow:hidden;
 }
 .frame::after{
@@ -645,11 +825,11 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   z-index:1;                          /* the border stays over the print */
 }
 
-/* Placeholder until a project has its own imagery: a plain white field,
+/* Placeholder until a project has its own imagery: a plain flat field,
    the same size and place the real screenshots take. */
 .frame-in{
   position:absolute; inset:var(--mat);
-  background:#fff;
+  background:var(--frame-in);
 }
 
 /* BSFFR is three shots of one round - the door, the vote, the reveal - so
@@ -787,7 +967,7 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   letter-spacing:-.01em;
   overflow:hidden;
   isolation:isolate;
-  transition:color .5s var(--ease);
+  transition:color .5s var(--ease), border-color .28s linear;
 }
 .cta::before{
   content:"";
@@ -798,7 +978,7 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 }
 
 @media (hover:hover){
-  .cta:hover{ color:#fff; }
+  .cta:hover{ color:var(--on-ink); }
   .cta:hover::before{ transform:translate3d(0,0,0); }
 }
 .cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
@@ -891,6 +1071,22 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 /* ---------- responsive ---------- */
 
 @media (max-width:820px){
+  /* The nav was already running off the left of a phone at four links -
+     var(--pad) is 12.1vw a side, which is a quarter of the screen gone
+     before a word is set - and the light switch is a fifth item. Pull the
+     padding in to the screen's own margin and tighten the tracking; the
+     row then fits at 360px with the switch still on it. */
+  .nav{
+    padding-inline:clamp(1rem, 5vw, 2rem);
+    gap:clamp(.85rem, 3.4vw, 1.5rem);
+  }
+  .nav a{ font-size:.8125rem; letter-spacing:.12em; }
+  .theme-switch{
+    width:1.9rem; height:1.9rem;
+    margin-inline:-.25rem -.4rem;
+  }
+  .theme-switch svg{ width:1.05rem; height:1.05rem; }
+
   .project{ width:100%; }
   .work{ gap:clamp(5rem,14vh,9rem); }
 

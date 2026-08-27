@@ -7,6 +7,10 @@
 <meta name="description" content="Selected work by Yerazik.">
 <meta name="theme-color" content="#e9e6e0">
 <link rel="preload" as="image" href="background.svg" fetchpriority="high">
+<!-- Blocking on purpose: a stored dark preference resolved after first
+     paint is a full-viewport white flash. It is ~1KB and sets one
+     attribute. -->
+<script src="theme.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- The three candidate faces for the wordmark. Dev mode switches
@@ -339,6 +343,21 @@
     <a class="cursor-target" href="resume.pdf" target="_blank" rel="noopener">Resume</a>
     <a class="cursor-target" href="https://github.com/YOUR-USERNAME" target="_blank" rel="noopener">Github</a>
     <a class="cursor-target" href="https://www.linkedin.com/in/YOUR-USERNAME" target="_blank" rel="noopener">Linkedin</a>
+
+    <!-- The light switch. Hidden until theme.js wires it up. -->
+    <button class="theme-switch cursor-target" type="button"
+            data-theme-toggle hidden aria-pressed="false"
+            aria-label="Switch to dark">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.4v2.3M12 19.3v2.3M2.4 12h2.3M19.3 12h2.3
+                 M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6
+                 M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/>
+      </svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20.5 14.4A8.6 8.6 0 0 1 9.6 3.5a8.6 8.6 0 1 0 10.9 10.9Z"/>
+      </svg>
+    </button>
   </nav>
 
   <div class="content-mask">
@@ -347,7 +366,7 @@
 
       <section class="hero">
         <h1 class="wordmark cursor-target" data-r><span class="wm-fx">Yerazik</span></h1>
-        <p class="lede" data-r> Software Engineer &amp; Builder</p>
+        <p class="lede" data-r>beep boop beep boop</p>
       </section>
 
       <section class="work">
