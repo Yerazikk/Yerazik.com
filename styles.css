@@ -486,6 +486,19 @@ body{
   overflow:hidden;
 }
 
+/* While the wordmark tunnel is mid-flight (main.js toggles this - it covers
+   the whole frozen runway, not just the armed/huge part), let it grow past
+   the mask's top edge and paint over the nav instead of being clipped right
+   at the nav's bottom edge. Content never scrolls during this window (the
+   whole point of the tunnel lock), so nothing else can peek above the nav
+   as a side effect - only the wordmark actually grows large enough to reach
+   up there. The "body" element selector here is deliberate: .nav is
+   z-index:5, and this needs to out-rank it without touching .nav itself. */
+.js body.tunnel-active .content-mask{
+  overflow:visible;
+  z-index:6;
+}
+
 .content{
   position:relative;
   padding:0 var(--pad);
@@ -808,7 +821,43 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 [data-r].in{
   opacity:1;
   transform:translate3d(0,0,0);
-  will-change:auto;
+}
+
+/* .wordmark carries data-r for its one-time fade-in on load, and is also
+   the scroll-linked hyperscale close-up target. Scoping this to .in (three
+   selectors, beats [data-r].in's two unconditionally - no source-order
+   dependency) means the fade-in above plays untouched, and only once it's
+   done does this take over completely. transition:none is required, not
+   cosmetic: [data-r]'s own transition (transform 1.1s, opacity .9s) would
+   otherwise still apply here, and since main.js rewrites --tz-scale every
+   single frame while scrolling, each write would restart a fresh 1.1s
+   transition toward an already-stale target - the wordmark would barely
+   appear to grow at all while actively scrolling. main.js already does its
+   own frame-by-frame lerp for the eased, weighted motion; this must be
+   instant so that lerp is the only smoothing in effect.
+
+   The scale lives here, on the box the cursor bracket measures - transform
+   is compositor-only and stays cheap no matter how large it grows. Blur is
+   the opposite: it is a real per-pixel convolution, so it is pushed onto
+   the .wm-fx child instead of stacking on the same layer as an animating
+   transform (a filter+transform layer forces the browser to re-rasterize
+   the blur at the combined scale on every frame, not just when the blur
+   radius itself changes - see developer.chrome.com/blog/animated-blur).
+   main.js also quantizes --tz-blur to whole pixels so most frames don't
+   change it at all, since a static filter value is what actually lets the
+   browser skip redoing the convolution. */
+.wordmark[data-r].in{
+  transform-origin:center center;
+  transform:scale(var(--tz-scale, 1));
+  transition:none;
+  will-change:transform;
+}
+.wordmark[data-r].in .wm-fx{
+  display:inline-block;
+  filter:blur(var(--tz-blur, 0px));
+  opacity:var(--tz-opacity, 1);
+  transition:none;
+  will-change:filter, opacity;
 }
 
 /* Hero cascades in on load */
@@ -1045,7 +1094,14 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
    art, and every .frame image are never touched.
 --------------------------------------------------------------------*/
 
-body.tc-focus .hero > *:not(.is-cursor),
+/* .wordmark is excluded here (not just :not(.is-cursor)) because it now
+   fully owns its own opacity/filter via the scroll tunnel effect above -
+   without this exclusion, this rule's specificity (the "body" element
+   selector edges out .wordmark[data-r].in's three classes/attributes) would
+   silently override the tunnel's opacity/blur back to .85/1px any time the
+   cursor bracket is latched onto anything at all, no matter how far into
+   the tunnel the page had scrolled. */
+body.tc-focus .hero > *:not(.is-cursor):not(.wordmark),
 body.tc-focus .project:not(.is-cursor) .meta,
 body.tc-focus .project:not(.is-cursor) .detail,
 body.tc-focus .outro > *:not(.is-cursor){
@@ -1071,4 +1127,6 @@ body.tc-focus .outro > *:not(.is-cursor){
   /* One shot, held. */
   .shots img{ animation:none !important; opacity:0 !important; }
   .shots img:first-child{ opacity:1 !important; }
+
+  .wordmark{ transform:none !important; filter:none !important; opacity:1 !important; }
 }

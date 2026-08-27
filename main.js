@@ -48,15 +48,74 @@
   /* ---------- state ---------- */
 
   var zoom = 1;            // stage scale; 1 in production, <1 only in dev
-  var target = 0, current = 0, max = 0, vh = 0, bgRate = 0;
+  var target = 0, current = 0, max = 0, realMax = 0, vh = 0, bgRate = 0;
   var items = [], running = false, last = 0;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  /* ---------- wordmark zoom tunnel ----------
+
+     A scroll-locked intro: the page holds completely still - content, bg,
+     everything - while the wordmark punches into a hyperscale close-up. Only
+     once it has fully zoomed/blurred/faded away ("exploded") does scrolling
+     start actually moving the page, continuing on seamlessly from there.
+
+     This is implemented by giving the real scrollable height an extra
+     tzRange of "dead" scroll distance up front: real scroll position
+     (`current`) drives the tunnel's progress directly, and the visual
+     offset handed to render()/reveal() is current - tzRange, clamped to 0 -
+     so nothing moves on screen until current passes tzRange, at which point
+     the visual offset picks up from exactly 0 with no jump. */
+
+  var TZ_MAX_DEFAULT = 6.5;         // dev-knob default, range [4.8, 9]
+  var TZ_ARM_SCALE = 2.0;           // scale at which the cursor lets go
+  var TZ_HOLD = 0.08;               // fraction of the runway held untouched
+                                     // before the zoom starts at all
+  var TZ_BLUR_MAX = 14;             // px, at full zoom
+  var TZ_BLUR_STEP = 1;             // px - blur is a real per-pixel
+                                     // convolution, not a cheap compositor
+                                     // op like transform/opacity, so its
+                                     // written value is quantized to whole
+                                     // pixels (see frame()) instead of
+                                     // rewritten at full float precision
+                                     // every frame - a static filter value
+                                     // is what lets the browser skip
+                                     // redoing the blur on a given frame
+  var TZ_RANGE_FACTOR = 0.55;       // fraction of viewport height (~55vh) -
+                                     // short on purpose, so a normal scroll
+                                     // gesture slides straight through it
+
+  // Nothing happens for the first TZ_HOLD of the runway - the name stays put
+  // and sharp before the effect kicks in, instead of starting to blur the
+  // instant scrolling begins.
+  function tzEase(t) {
+    if (t <= TZ_HOLD) return 0;
+    var u = (t - TZ_HOLD) / (1 - TZ_HOLD);
+    return 1 - Math.pow(1 - u, 2.2);
+  }
+
+  // Stays fully opaque through almost the entire zoom - "opaque while it's
+  // bigger" - and only drops in the last stretch, right as it explodes.
+  function tzOpacityCurve(e) {
+    return e < 0.85 ? 1 : clamp(1 - (e - 0.85) / 0.15, 0, 1);
+  }
+
+  var tzMax = TZ_MAX_DEFAULT;       // dev-knob value
+  var tzRange = 0;                  // px, recomputed in measure()
+  var tzScale = 1, tzBlur = 0, tzOpacity = 1;   // lerped, painted values
+  var tzBlurWritten = -1;           // last quantized --tz-blur px value
+  var tzArmed = false;
+  var tzActive = false;             // true anywhere inside the runway - lets
+                                     // the wordmark render above the nav
+                                     // instead of being clipped by the mask
+                                     // that normally keeps scrolled content
+                                     // from peeking above it (styles.css)
 
   /* ---------- measure: the only place we read layout ---------- */
 
   function measure() {
     vh = stage.clientHeight;                 // = real viewport height / zoom
+    tzRange = Math.max(1, vh * TZ_RANGE_FACTOR);
 
     // Take the content out of its transform to read its true height
     var prev = content.style.transform;
@@ -71,9 +130,13 @@
     content.style.transform = prev;
 
     max = Math.max(0, h - vh);
+    realMax = max + tzRange;         // adds the frozen tunnel runway up front
 
-    // Body carries the real scroll height; content space is scaled by zoom
-    document.body.style.height = Math.round(h * zoom) + 'px';
+    // Body carries the real scroll height; content space is scaled by zoom.
+    // The extra tzRange is real scroll distance that produces no content
+    // movement at all (see the tunnel comment above) - it has to be added
+    // here or the last tzRange of the page would be unreachable by scrolling.
+    document.body.style.height = Math.round((h + tzRange) * zoom) + 'px';
 
     // Stand the background up at the photo's own aspect ratio (never
     // shorter than the viewport). It grows downwards, so the scene always
@@ -87,9 +150,10 @@
     var travel = bgh - vh;
     bgRate = max > 0 ? Math.min(BG_RATE, travel / max) : 0;
 
-    target = current = clamp(window.scrollY / zoom, 0, max);
-    render(current);
-    reveal(current);
+    target = current = clamp(window.scrollY / zoom, 0, realMax);
+    var vy = clamp(current - tzRange, 0, max);
+    render(vy);
+    reveal(vy);
   }
 
   /* ---------- paint ---------- */
@@ -126,8 +190,52 @@
       last = 0;
     }
 
-    render(current);
-    reveal(current);
+    // Tunnel progress off the same lerped scroll value already computed
+    // above - free, no extra scroll read.
+    var tzT = clamp(current / tzRange, 0, 1);
+    var tzE = tzEase(tzT);
+
+    var tzWantScale = 1 + (tzMax - 1) * tzE;
+    var tzWantBlur = TZ_BLUR_MAX * tzE;
+    var tzWantOpacity = tzOpacityCurve(tzE);
+
+    // Chase the target values the same way target-cursor.js chases the
+    // pointer - frame-rate independent, so a fast/jerky scroll still glides.
+    var tzK = 1 - Math.pow(1 - 0.32, dt / 16.667);
+    tzScale += (tzWantScale - tzScale) * tzK;
+    tzBlur += (tzWantBlur - tzBlur) * tzK;
+    tzOpacity += (tzWantOpacity - tzOpacity) * tzK;
+
+    root.style.setProperty('--tz-scale', tzScale.toFixed(3));
+    root.style.setProperty('--tz-opacity', tzOpacity.toFixed(3));
+
+    // Quantized on purpose - see TZ_BLUR_STEP above. Only actually touches
+    // the DOM (and triggers a re-blur) when the rounded value changes.
+    var blurQ = Math.round(tzBlur / TZ_BLUR_STEP) * TZ_BLUR_STEP;
+    if (blurQ !== tzBlurWritten) {
+      tzBlurWritten = blurQ;
+      root.style.setProperty('--tz-blur', blurQ.toFixed(0) + 'px');
+    }
+
+    var shouldArm = tzScale >= TZ_ARM_SCALE;
+    if (shouldArm !== tzArmed) {
+      tzArmed = shouldArm;
+      document.body.classList.toggle('tunnel-armed', tzArmed);
+      document.dispatchEvent(new CustomEvent('tunnel:armed', { detail: { armed: tzArmed } }));
+    }
+
+    var shouldBeActive = current < tzRange;
+    if (shouldBeActive !== tzActive) {
+      tzActive = shouldBeActive;
+      document.body.classList.toggle('tunnel-active', tzActive);
+    }
+
+    // The page holds completely still until current passes tzRange - see
+    // the tunnel comment above measure(). vy picks up from exactly 0 the
+    // moment it does, so there is no jump at the handoff.
+    var vy = clamp(current - tzRange, 0, max);
+    render(vy);
+    reveal(vy);
 
     if (running) requestAnimationFrame(frame);
   }
@@ -140,7 +248,7 @@
   }
 
   function onScroll() {
-    target = clamp(window.scrollY / zoom, 0, max);
+    target = clamp(window.scrollY / zoom, 0, realMax);
     start();
   }
 
@@ -178,6 +286,7 @@
     { id: 'gap',  label: 'Project gap',   min: -420, max: 420,  step: 2,    val: null,    fmt: function (v) { return v + 'px'; } },
     { id: 'hero', label: 'Hero size',     min: 0.4,  max: 2,    step: 0.01, val: 1.16,    fmt: function (v) { return v.toFixed(2) + 'x'; } },
     { id: 'bgz',  label: 'BG zoom',       min: 0.2,  max: 1.6,  step: 0.01, val: 1,       fmt: function (v) { return v.toFixed(2) + 'x'; } },
+    { id: 'tunnelzoom', label: 'Tunnel zoom', min: 4.8, max: 9, step: 0.1, val: TZ_MAX_DEFAULT, fmt: function (v) { return v.toFixed(1) + 'x'; } },
     { id: 'bg',   label: 'BG parallax',   min: 0,    max: 1,    step: 0.01, val: 0.28,    fmt: function (v) { return v.toFixed(2) + 'x'; } },
     { id: 'ease', label: 'Scroll ease',   min: 0.03, max: 0.2,  step: 0.002, val: 0.07,   fmt: function (v) { return v.toFixed(3); } }
   ];
@@ -316,9 +425,9 @@
       zoom = v;
       root.style.setProperty('--zoom', v);
       measure();
-      target = current = clamp(keep, 0, max);
+      target = current = clamp(keep, 0, realMax);
       window.scrollTo(0, Math.round(current * zoom));
-      render(current);
+      render(clamp(current - tzRange, 0, max));
     } else if (id === 'pad') {
       root.style.setProperty('--pad', v + 'vw');
       measure();
@@ -339,6 +448,8 @@
       measure();
     } else if (id === 'ease') {
       EASE = v;
+    } else if (id === 'tunnelzoom') {
+      tzMax = v;
     }
   }
 
@@ -457,7 +568,8 @@
         '  --branch-x: ' + branch.x + 'px;\n' +
         '  --branch-y: ' + branch.y + 'px;\n' +
         '  --branch-rot: ' + branch.r + 'deg;\n}\n' +
-        '/* main.js */ BG_RATE = ' + byId('bg').val + '; EASE = ' + byId('ease').val + ';';
+        '/* main.js */ BG_RATE = ' + byId('bg').val + '; EASE = ' + byId('ease').val + ';\n' +
+        '/* tunnel zoom = ' + byId('tunnelzoom').val + 'x */\n';
       var btn = e.currentTarget;
       if (navigator.clipboard) navigator.clipboard.writeText(css);
       console.log(css);
@@ -479,11 +591,12 @@
       branch.x = 0; branch.y = 0; branch.r = 0; applyBranch();
       wmIdx = 0; applyWm();
       bgSrc = 0; applyBg();
-      zoom = 1; BG_RATE = 0.28; EASE = 0.07;
+      zoom = 1; BG_RATE = 0.28; EASE = 0.07; tzMax = TZ_MAX_DEFAULT;
       byId('pad').val = null; seedPad();
       byId('gap').val = 32;
       byId('maxw').val = 1130; byId('hero').val = 1.16; byId('bgz').val = 1;
       byId('bg').val = 0.28; byId('ease').val = 0.07; byId('zoom').val = 1;
+      byId('tunnelzoom').val = TZ_MAX_DEFAULT;
       knobs.forEach(function (k) {
         dev.querySelector('#k-' + k.id).value = k.val;
         dev.querySelector('#v-' + k.id).textContent = k.fmt(k.val);
