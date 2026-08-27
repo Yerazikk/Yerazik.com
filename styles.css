@@ -641,18 +641,16 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 /* ---------- project detail ----------
 
    The description and stack live in the empty half of the column, on the
-   card's outer side: a left card opens to its right, a right card to its
-   left. The description is simply there - it is what the project is, and
-   reading it should not cost a hover. The stack is the reward: closed, it
-   is clipped to nothing against the card's edge, so opening reads as the
-   list being drawn out of the card rather than fading in on top of the
-   page. The cursor drives it - target-cursor.js marks the element it has
-   latched onto with .is-cursor - and :hover is the fallback wherever the
-   custom cursor bows out. */
+   card's outer side: a left card sets them to its right, a right card to
+   its left. Both are simply there - they are what the project is, and
+   reading them should not cost a hover. --detail-drop carries the block
+   down from the top of the frame so it reads against the middle of the
+   card rather than its top edge. */
 
 .detail{
+  --detail-drop:clamp(2rem,6vw,5rem);
   position:absolute;
-  top:0;
+  top:var(--detail-drop);
   width:min(74%, 360px);
   pointer-events:none;              /* never steals the card's hit area */
 }
@@ -669,8 +667,6 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   padding-top:1.1rem;
   border-top:1px solid var(--rule);
   list-style:none;
-  opacity:0;
-  transition:opacity .45s var(--ease), clip-path .62s var(--ease), transform .62s var(--ease);
 }
 .stack li{
   padding:.3rem .6rem;
@@ -682,7 +678,7 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   opacity:.82;
 }
 
-/* Side, and the direction the clip travels with it */
+/* Side */
 .project.left  .detail{
   left:calc(100% + clamp(1.5rem,3vw,2.75rem));
 }
@@ -690,31 +686,16 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   right:calc(100% + clamp(1.5rem,3vw,2.75rem));
   text-align:right;
 }
-.project.left  .stack{
-  clip-path:inset(0 100% 0 0);
-  transform:translate3d(-.75rem,0,0);
-}
 .project.right .stack{
   justify-content:flex-end;
-  clip-path:inset(0 0 0 100%);
-  transform:translate3d(.75rem,0,0);
 }
 
-/* Open */
-.project.is-cursor{ z-index:3; }     /* clears the interlocked neighbour */
-.project.is-cursor .stack{
-  opacity:1;
-  clip-path:inset(0 0 0 0);
-  transform:translate3d(0,0,0);
-}
+/* The hovered or cursor-latched card still clears its interlocked
+   neighbour, there is just nothing left to open. */
+.project.is-cursor{ z-index:3; }
 
 @media (hover:hover){
   .project:hover{ z-index:3; }
-  .project:hover .stack{
-    opacity:1;
-    clip-path:inset(0 0 0 0);
-    transform:translate3d(0,0,0);
-  }
 }
 
 /* ---------- outro ---------- */
@@ -830,10 +811,6 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   .project.left .stack,
   .project.right .stack{
     justify-content:flex-start;
-    opacity:1;
-    clip-path:none;
-    transform:none;
-    transition:none;
   }
 }
 
@@ -1000,9 +977,6 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   .leaf{ animation:none !important; }
   .gust{ animation:none !important; }
   [data-r]{ opacity:1 !important; transform:none !important; transition:none !important; }
-
-  /* The panel still opens on hover, it just stops travelling to get there. */
-  .detail, .stack{ transition:none !important; }
 
   /* One shot, held. */
   .shots img{ animation:none !important; opacity:0 !important; }

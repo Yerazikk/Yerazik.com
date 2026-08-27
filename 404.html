@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lost in the dark? — Yerazik</title>
+<meta name="description" content="That page isn't here.">
+<meta name="theme-color" content="#0d0f12">
+<meta name="robots" content="noindex">
+<link rel="preload" as="image" href="404.jpg" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap">
+<!-- shares the site's tokens, sans stack and target-cursor styling -->
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---------------------------------------------------------------
+   404 - the same wall after dark. The photo carries the whole page,
+   so everything here is type placed into the room's empty corner:
+   open wall upper-left, streetlamp upper-right, plant below.
+----------------------------------------------------------------*/
+
+:root{ --ink:#f2efe8; --ground:#0d0f12; }
+
+body{
+  color:var(--ink);
+  background:var(--ground);
+  min-height:100svh;
+  overflow-x:hidden;
+}
+
+.lost{
+  position:relative;
+  isolation:isolate;
+  min-height:100svh;
+  display:flex;
+  align-items:center;
+  padding:14vh var(--pad) 12vh;
+}
+
+/* The photo. Portrait, so it is anchored right - that keeps the lamp
+   and the plant in frame on a wide screen and hands the left third
+   over to the type. */
+.lost::before{
+  content:"";
+  position:absolute; inset:0; z-index:-2;
+  background:url("404.jpg") right center / cover no-repeat, var(--ground);
+}
+
+/* Just enough lift on the left for the type to sit on, and a touch
+   more weight at the foot. Nothing the lamp has to fight. */
+.lost::after{
+  content:"";
+  position:absolute; inset:0; z-index:-1;
+  background:
+    linear-gradient(100deg, rgba(8,10,13,.82) 0%, rgba(8,10,13,.55) 34%,
+                    rgba(8,10,13,.12) 62%, rgba(8,10,13,0) 82%),
+    linear-gradient(to top, rgba(8,10,13,.5), rgba(8,10,13,0) 38%);
+}
+
+.lost .grain{ position:fixed; z-index:1; opacity:.32; mix-blend-mode:overlay; }
+
+.lost-in{
+  position:relative;
+  z-index:2;
+  width:100%;
+  max-width:var(--maxw);
+  margin-inline:auto;
+}
+
+.lost .eyebrow{
+  font-size:.9375rem;
+  letter-spacing:.34em;
+  opacity:.62;
+}
+
+/* .wordmark carries the padded box the cursor bracket latches onto, and
+   lets target-cursor.js park on load the way it does on the home page;
+   the size curve below is this page's own. */
+.lost h1{
+  font-family:var(--wm-font, var(--sans));
+  font-weight:var(--wm-weight, 400);
+  font-size:clamp(3.25rem, 11vw, 10rem);
+  line-height:.86;
+  letter-spacing:.005em;
+  max-width:11ch;
+  margin:.22em 0 0 -.02em;
+  text-wrap:balance;
+}
+
+.lost .lede{
+  margin-top:clamp(1.25rem,2.6vw,2rem);
+  max-width:34ch;
+  font-size:clamp(1.0625rem,1.5vw,1.25rem);
+  line-height:1.6;
+  opacity:.74;
+}
+
+/* The site's pill, inverted for a dark room */
+.lost .cta{
+  margin-top:clamp(2rem,5vh,3rem);
+  border-color:rgba(242,239,232,.5);
+  color:var(--ink);
+}
+.lost .cta::before{ background:var(--ink); }
+@media (hover:hover){
+  .lost .cta:hover{ color:#0d0f12; }
+}
+.lost .cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
+
+/* On a phone the portrait photo fills the screen properly on its own,
+   so the wash pulls back to a plain top-down scrim. */
+@media (max-width:820px){
+  .lost{ align-items:flex-end; padding-bottom:16vh; }
+  .lost::before{ background-position:center; }
+  .lost::after{
+    background:linear-gradient(to top, rgba(8,10,13,.88) 0%,
+      rgba(8,10,13,.62) 42%, rgba(8,10,13,.12) 78%, rgba(8,10,13,0) 100%);
+  }
+  .lost h1{ max-width:none; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  [data-r]{ opacity:1; transform:none; transition:none; }
+}
+</style>
+<noscript><style>[data-r]{ opacity:1; transform:none; }</style></noscript>
+</head>
+<body>
+
+<main class="lost">
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="lost-in">
+    <p class="eyebrow" data-r>404</p>
+    <h1 class="wordmark cursor-target" data-r>Lost in the dark?</h1>
+    <p class="lede" data-r>This page isn&rsquo;t here &mdash; or it never was. The way back is one click away.</p>
+    <a class="cta cursor-target" href="/" data-r><span>Back to the light</span></a>
+  </div>
+</main>
+
+<script>
+  // The hero cascade from the main page, without pulling in main.js
+  document.documentElement.classList.add('js');
+  addEventListener('load', function () {
+    document.querySelectorAll('[data-r]').forEach(function (el, i) {
+      setTimeout(function () { el.classList.add('in'); }, 80 + i * 120);
+    });
+  });
+</script>
+<script src="target-cursor.js" defer></script>
+</body>
+</html>
