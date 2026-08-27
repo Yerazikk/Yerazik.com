@@ -31,6 +31,19 @@
     parkSelector: '.wordmark',
     parkDelay: 0.4,             // seconds
 
+    // Gravity. A target does not wait to be hovered - it reaches out. Any
+    // element whose box comes within `gravityRadius` of the pointer latches,
+    // and while it holds, the bracket itself is dragged off the true pointer
+    // and onto the nearest point of that box by `gravityPull` (0 = no drag,
+    // 1 = the bracket sits flat on the edge). `gravityStick` is the slack a
+    // held target gets in the contest against its neighbours, so the latch
+    // does not flicker along the seam between two cards.
+    gravity: true,
+    gravityRadius: 130,         // px outside the box where the pull begins
+    gravityPull: 0.5,
+    gravityStick: 45,           // px of favouritism for the held target
+    scanEvery: 0.06,            // seconds between proximity scans
+
     // The wrapper is blended with `difference`, as in the original. On this
     // cream wall a plain white cursor would be invisible, so the blend is
     // what guarantees contrast - the trade is that the two colours above are
@@ -115,14 +128,19 @@
     target = el;
     grip = 0;
     release = -1;
-    checkAt = 0.1;
+    checkAt = CONFIG.gravity ? CONFIG.scanEvery : 0.1;
     rot = 0;                          // the bracket stops spinning, square on
     wrap.classList.add('is-on');
     el.classList.add('is-cursor');    // the element's own hook - a project
                                       // opens its detail panel off this
 
-    leaveHandler = function () { unlatch(); };
-    el.addEventListener('mouseleave', leaveHandler);
+    // Under gravity the proximity scan owns both the latch and the release -
+    // a plain mouseleave would drop the target the instant the pointer
+    // crossed the edge, which is the opposite of what we want out here.
+    if (!CONFIG.gravity) {
+      leaveHandler = function () { unlatch(); };
+      el.addEventListener('mouseleave', leaveHandler);
+    }
     start();
   }
 
@@ -139,6 +157,37 @@
     start();
   }
 
+  /* ---------- proximity ----------
+
+     Distance from the pointer to a box, zero anywhere inside it. Twelve
+     targets on this page, so a full sweep every scanEvery seconds costs
+     twelve rect reads - cheaper than the elementFromPoint it replaces, and
+     unlike that test it can see a card the pointer is merely near. */
+
+  function edgeDist(r, x, y) {
+    var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+    var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function scan() {
+    var els = document.querySelectorAll(CONFIG.targetSelector);
+    var best = null, bestD = Infinity;
+
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var r = el.getBoundingClientRect();
+      if (!r.width && !r.height) continue;
+
+      var d = edgeDist(r, mx, my);
+      if (el === target) d -= CONFIG.gravityStick;   // incumbency
+      if (d < bestD) { bestD = d; best = el; }
+    }
+
+    if (best && bestD <= CONFIG.gravityRadius) latch(best);
+    else if (target) unlatch();
+  }
+
   /* ---------- the loop ---------- */
 
   function frame(now) {
@@ -147,10 +196,44 @@
     var dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
     last = now;
 
+    // Proximity sweep. Runs latched or not: it is what pulls a nearby card
+    // in, and what lets go once the pointer has drifted off all of them.
+    if (CONFIG.gravity) {
+      checkAt -= dt;
+      if (checkAt <= 0) { checkAt = CONFIG.scanEvery; scan(); }
+    }
+
+    // The one layout read, and it has to happen before the chase - the pull
+    // below bends the pointer the bracket is chasing. This element keeps
+    // moving under the cursor while the smooth-scroll lerp is still settling.
+    var box = null, aimX = mx, aimY = my;
+
+    if (target) {
+      var r = target.getBoundingClientRect();
+      var l = r.left - BORDER, t = r.top - BORDER;
+      var rr = r.right + BORDER - CORNER, b = r.bottom + BORDER - CORNER;
+      box = [[l, t], [rr, t], [rr, b], [l, b]];
+
+      // Gravity: drag the bracket off the true pointer toward the nearest
+      // point of the box, hardest at the edge and fading to nothing by the
+      // rim of the radius. Inside the box the nearest point is the pointer
+      // itself, so aiming is never touched where it matters.
+      if (CONFIG.gravity && CONFIG.gravityPull > 0) {
+        var nx = Math.min(Math.max(mx, r.left), r.right) - mx;
+        var ny = Math.min(Math.max(my, r.top), r.bottom) - my;
+        var d = Math.sqrt(nx * nx + ny * ny);
+        if (d > 0) {
+          var f = CONFIG.gravityPull * Math.max(0, 1 - d / CONFIG.gravityRadius);
+          aimX = mx + nx * f;
+          aimY = my + ny * f;
+        }
+      }
+    }
+
     // pointer chase
     var k = lerpK(0.35, dt);
-    px += (mx - px) * k;
-    py += (my - py) * k;
+    px += (aimX - px) * k;
+    py += (aimY - py) * k;
 
     // spin, only while nothing is latched
     if (!target) rot = (rot + 360 * dt / CONFIG.spinDuration) % 360;
@@ -159,13 +242,6 @@
     scale += (wantScale - scale) * lerpK(0.25, dt);
 
     if (target) {
-      // The one layout read: this element keeps moving under the cursor
-      // while the smooth-scroll lerp is still settling.
-      var r = target.getBoundingClientRect();
-      var l = r.left - BORDER, t = r.top - BORDER;
-      var rr = r.right + BORDER - CORNER, b = r.bottom + BORDER - CORNER;
-      var box = [[l, t], [rr, t], [rr, b], [l, b]];
-
       grip = Math.min(1, grip + dt / CONFIG.hoverDuration);
       var g = outQuad(grip);
       var snap = lerpK(0.5, dt);
@@ -178,13 +254,16 @@
         cur[i][1] += (wantY - cur[i][1]) * f;
       }
 
-      // The pointer can leave a target without a mouseleave when the page
-      // scrolls out from under it, so re-test where we actually are.
-      checkAt -= dt;
-      if (checkAt <= 0) {
-        checkAt = 0.1;
-        var under = document.elementFromPoint(px, py);
-        if (!under || (under !== target && under.closest(CONFIG.targetSelector) !== target)) unlatch();
+      // Without gravity the pointer can still leave a target without a
+      // mouseleave - the page scrolls out from under it - so re-test where
+      // we actually are. With gravity the sweep above has already done this.
+      if (!CONFIG.gravity) {
+        checkAt -= dt;
+        if (checkAt <= 0) {
+          checkAt = 0.1;
+          var under = document.elementFromPoint(px, py);
+          if (!under || (under !== target && under.closest(CONFIG.targetSelector) !== target)) unlatch();
+        }
       }
     } else if (release >= 0) {
       release += dt;

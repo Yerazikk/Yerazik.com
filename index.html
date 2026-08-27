@@ -44,7 +44,10 @@
 
       <!-- The gust layers only run once, on load: the whole mass drops in
            slightly off-position and settles, as if the light had just
-           caught it. The per-leaf drift keeps running inside them. -->
+           caught it. The per-leaf drift keeps running inside them.
+           .lean above it is the cursor's handle - breeze.js leans the whole
+           mass a few pixels away from the pointer. -->
+      <div class="lean">
       <div class="gust">
 
       <svg class="leaf l1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMax slice">
@@ -181,17 +184,113 @@
 
 
       </div>
+      </div>
 
-      <!-- Arrowhead vine, hung high in the top-right: broad arrow-shaped
+    <!-- Top-left branch. The same three layers as the bottom-left mass,
+         flipped about the horizontal so the stems hang into the corner
+         instead of rising out of it - and running the same per-leaf drift,
+         which is the whole point of reusing them rather than drawing a
+         second vine. Its own placement rig on --branch-*, so dev mode can
+         move it without touching the mass it was cut from.
+
+         The pointer does not touch it: it drifts on its keyframes and
+         nothing else, so no part of it is recomposited per frame. -->
+    <div class="branch">
+      <div class="gust gust-c">
+
+      <svg class="leaf tl t1" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMin slice">
+        <defs><path id="b1" d="M0 0C19-22 26-58 5-100C-3-105-9-103-12-97C-26-60-19-24 0 0Z"/></defs>
+        <g fill="currentColor" transform="matrix(1 0 0 -1 0 1000)">
+          <path d="M-30 1040C90 975 210 915 330 855 420 810 500 770 590 735" stroke="currentColor" stroke-width="15" fill="none" stroke-linecap="round"/>
+          <path d="M-10 1020C60 900 110 780 160 650" stroke="currentColor" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <path d="M-20 1062C160 1012 340 962 520 902" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <use href="#b1" transform="translate(70 980) rotate(10) scale(1.5)"/>
+          <use href="#b1" transform="translate(150 930) rotate(34) scale(1.3)"/>
+          <use href="#b1" transform="translate(145 946) rotate(-18) scale(1.2)"/>
+          <use href="#b1" transform="translate(240 890) rotate(52) scale(1.45)"/>
+          <use href="#b1" transform="translate(235 902) rotate(4) scale(1.15)"/>
+          <use href="#b1" transform="translate(330 855) rotate(66) scale(1.3)"/>
+          <use href="#b1" transform="translate(325 863) rotate(26) scale(1.5)"/>
+          <use href="#b1" transform="translate(420 812) rotate(74) scale(1.2)"/>
+          <use href="#b1" transform="translate(415 821) rotate(40) scale(1.35)"/>
+          <use href="#b1" transform="translate(505 775) rotate(86) scale(1.25)"/>
+          <use href="#b1" transform="translate(500 783) rotate(52) scale(1.1)"/>
+          <use href="#b1" transform="translate(590 738) rotate(96) scale(1.15)"/>
+          <use href="#b1" transform="translate(585 746) rotate(64) scale(1.2)"/>
+          <use href="#b1" transform="translate(20 970) rotate(-6) scale(1.4)"/>
+          <use href="#b1" transform="translate(55 900) rotate(18) scale(1.3)"/>
+          <use href="#b1" transform="translate(50 906) rotate(-30) scale(1.25)"/>
+          <use href="#b1" transform="translate(90 830) rotate(8) scale(1.45)"/>
+          <use href="#b1" transform="translate(85 841) rotate(-24) scale(1.2)"/>
+          <use href="#b1" transform="translate(120 760) rotate(26) scale(1.35)"/>
+          <use href="#b1" transform="translate(115 771) rotate(-12) scale(1.3)"/>
+          <use href="#b1" transform="translate(150 690) rotate(14) scale(1.4)"/>
+          <use href="#b1" transform="translate(145 701) rotate(-30) scale(1.15)"/>
+          <use href="#b1" transform="translate(166 642) rotate(2) scale(1.25)"/>
+          <use href="#b1" transform="translate(100 1035) rotate(78) scale(1.4)"/>
+          <use href="#b1" transform="translate(200 1005) rotate(88) scale(1.3)"/>
+          <use href="#b1" transform="translate(300 975) rotate(70) scale(1.5)"/>
+          <use href="#b1" transform="translate(400 945) rotate(96) scale(1.25)"/>
+          <use href="#b1" transform="translate(490 913) rotate(82) scale(1.35)"/>
+          <use href="#b1" transform="translate(60 1050) rotate(-40) scale(1.6)"/>
+          <use href="#b1" transform="translate(140 1040) rotate(-14) scale(1.7)"/>
+          <use href="#b1" transform="translate(220 1030) rotate(12) scale(1.5)"/>
+          <use href="#b1" transform="translate(300 1020) rotate(38) scale(1.6)"/>
+          <use href="#b1" transform="translate(380 1005) rotate(60) scale(1.4)"/>
+          <use href="#b1" transform="translate(30 900) rotate(-46) scale(1.3)"/>
+          <use href="#b1" transform="translate(200 960) rotate(-2) scale(1.4)"/>
+          <use href="#b1" transform="translate(270 940) rotate(24) scale(1.3)"/>
+        </g>
+      </svg>
+    
+      <svg class="leaf tl t2" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMin slice">
+        <defs><path id="b3" d="M0 0C20-20 28-56 7-98C0-104-7-102-12-95C-25-58-19-22 0 0Z"/></defs>
+        <g fill="currentColor" transform="matrix(1 0 0 -1 0 1000)">
+          <path d="M-20 1000C80 940 170 890 260 856 330 830 390 812 450 800" stroke="currentColor" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <use href="#b3" transform="translate(30 985) rotate(6) scale(1.2)"/>
+          <use href="#b3" transform="translate(100 940) rotate(38) scale(1.3)"/>
+          <use href="#b3" transform="translate(96 950) rotate(-22) scale(1.1)"/>
+          <use href="#b3" transform="translate(178 898) rotate(56) scale(1.25)"/>
+          <use href="#b3" transform="translate(174 908) rotate(10) scale(1.35)"/>
+          <use href="#b3" transform="translate(258 858) rotate(70) scale(1.15)"/>
+          <use href="#b3" transform="translate(252 868) rotate(28) scale(1.3)"/>
+          <use href="#b3" transform="translate(336 828) rotate(84) scale(1.1)"/>
+          <use href="#b3" transform="translate(330 838) rotate(44) scale(1.2)"/>
+          <use href="#b3" transform="translate(414 806) rotate(94) scale(1.05)"/>
+          <use href="#b3" transform="translate(408 814) rotate(58) scale(1.15)"/>
+          <use href="#b3" transform="translate(70 780) rotate(-24) scale(1.15)"/>
+          <use href="#b3" transform="translate(130 745) rotate(0) scale(1.2)"/>
+          <use href="#b3" transform="translate(95 700) rotate(-14) scale(1.05)"/>
+          <use href="#b3" transform="translate(180 830) rotate(20) scale(1.1)"/>
+          <use href="#b3" transform="translate(240 900) rotate(44) scale(1.15)"/>
+        </g>
+      </svg>
+    
+      <svg class="leaf tl t3" viewBox="0 0 1000 1000" preserveAspectRatio="xMinYMin slice">
+        <defs><path id="b5" d="M0 0C17-22 24-56 3-96C-4-101-10-99-13-93C-26-58-17-24 0 0Z"/></defs>
+        <g fill="currentColor" transform="matrix(1 0 0 -1 0 1000)">
+          <path d="M340 1010C420 960 490 918 560 890" stroke="currentColor" stroke-width="12" fill="none" stroke-linecap="round"/>
+          <use href="#b5" transform="translate(380 982) rotate(48) scale(1.2)"/>
+          <use href="#b5" transform="translate(374 992) rotate(6) scale(1.1)"/>
+          <use href="#b5" transform="translate(452 934) rotate(64) scale(1.3)"/>
+          <use href="#b5" transform="translate(446 944) rotate(22) scale(1.15)"/>
+          <use href="#b5" transform="translate(524 902) rotate(80) scale(1.1)"/>
+          <use href="#b5" transform="translate(518 910) rotate(40) scale(1.2)"/>
+          <use href="#b5" transform="translate(566 888) rotate(96) scale(1)"/>
+          <use href="#b5" transform="translate(300 960) rotate(26) scale(1.1)"/>
+          <use href="#b5" transform="translate(250 930) rotate(4) scale(1.05)"/>
+        </g>
+      </svg>
+    
+
+      </div>
+    </div>
+
+    <!-- Arrowhead vine, hung high in the top-right: broad arrow-shaped
            leaves on stems that trail down toward the corner. Anchored to
            the opposite corner from l1-l5 so the two masses frame the type. -->
       <div class="vine">
       <div class="gust gust-b">
-      <!-- Two nested pendulums, then a third on the leaf itself. Each is a
-           single ease-in-out swing on its own prime-ish period, so the sum
-           never repeats but never changes direction abruptly either. -->
-      <div class="vine-sway">
-      <div class="vine-lift">
       <svg class="leaf l6" viewBox="0 0 1000 1000" preserveAspectRatio="xMaxYMin slice">
         <defs><path id="a6" d="M0 0C-4-10-26-10-33-20C-27-48-15-78 0-112C15-78 27-48 33-20C26-10 4-10 0 0Z"/></defs>
         <g fill="currentColor">
@@ -227,8 +326,6 @@
       </svg>
       </div>
       </div>
-      </div>
-      </div>
     </div>
 
     <!-- Ledge / baseboard, very slightly off-level like the reference -->
@@ -241,13 +338,13 @@
     <div class="inner">
 
       <section class="hero">
-        <p class="eyebrow" data-r>Portfolio — 2026</p>
         <h1 class="wordmark cursor-target" data-r>Yerazik</h1>
         <p class="lede" data-r>Design &amp; development, built quietly and carefully.</p>
       </section>
 
       <section class="work">
 
+        <!-- Drawangulate — hidden for now
         <a class="cursor-target project left" data-r href="https://drawangulate.vercel.app/" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
           <div class="meta">
@@ -265,6 +362,7 @@
             </ul>
           </div>
         </a>
+        -->
 
         <a class="cursor-target project right" data-r href="https://use-muse.com" target="_blank" rel="noopener">
           <div class="frame"><div class="frame-in"></div></div>
@@ -355,7 +453,7 @@
         </article>
 
         <a class="cursor-target project left" data-r href="https://bsffr.vercel.app/" target="_blank" rel="noopener">
-          <div class="frame has-shots">
+          <div class="frame">
             <!-- The round in order: the door, the vote, the reveal. -->
             <div class="shots">
               <img src="assets/bsffr/01-landing.webp" alt="BSFFR title screen, with create lobby and join lobby.">
@@ -437,7 +535,6 @@
         <p class="eyebrow" data-r>Currently taking on new work</p>
         <a class="cta cursor-target" href="mailto:yerazikboghozian@gmail.com" data-r>
           <span>Work with me</span>
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
         <p class="fine" data-r>yerazikboghozian@gmail.com</p>
       </section>
@@ -447,6 +544,7 @@
 </div>
 
 <script src="main.js" defer></script>
+<script src="breeze.js" defer></script>
 <script src="target-cursor.js" defer></script>
 </body>
 </html>

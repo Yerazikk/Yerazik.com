@@ -189,7 +189,8 @@
      shift+R turns the other way. The leaves keep drifting inside this. */
 
   var plant = { x: -24, y: 1520, r: 0 };
-  var vine  = { x: -1136, y: -1192, r: 184 };   // the top-right vine, on IJKL / O
+  var vine  = { x: 48, y: -1616, r: 379 };   // the top-right vine, on the arrows / O
+  var branch = { x: 0, y: 0, r: 0 };         // the top-left branch, on YGHJ / U
   var PLANT_STEP = 8;   // px per tap (1 with shift)
   var PLANT_TURN = 1;   // deg per tap
 
@@ -207,6 +208,14 @@
     root.style.setProperty('--vine-rot', vine.r + 'deg');
     var out = dev && dev.querySelector('#v-vine');
     if (out) out.textContent = vine.x + ', ' + vine.y + ', ' + vine.r.toFixed(1) + '\u00b0';
+  }
+
+  function applyBranch() {
+    root.style.setProperty('--branch-x', branch.x + 'px');
+    root.style.setProperty('--branch-y', branch.y + 'px');
+    root.style.setProperty('--branch-rot', branch.r + 'deg');
+    var out = dev && dev.querySelector('#v-branch');
+    if (out) out.textContent = branch.x + ', ' + branch.y + ', ' + branch.r.toFixed(1) + '\u00b0';
   }
 
   /* ---------- wordmark face: Z / X switch between the three ----------
@@ -334,7 +343,7 @@
   }
 
   function save() {
-    var o = { plant: plant, vine: vine, bgsrc: BG_SRC[bgSrc].id, wm: wmIdx, min: devMin };
+    var o = { plant: plant, vine: vine, branch: branch, bgsrc: BG_SRC[bgSrc].id, wm: wmIdx, min: devMin };
     for (var i = 0; i < knobs.length; i++) if (knobs[i].id !== 'zoom') o[knobs[i].id] = knobs[i].val;
     try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {}
   }
@@ -366,6 +375,10 @@
       vine.x = o.vine.x || 0; vine.y = o.vine.y || 0; vine.r = o.vine.r || 0;
       applyVine();
     }
+    if (o.branch) {
+      branch.x = o.branch.x || 0; branch.y = o.branch.y || 0; branch.r = o.branch.r || 0;
+      applyBranch();
+    }
   })();
 
   function build() {
@@ -381,13 +394,15 @@
     }
     html += '<label><span class="row"><span>Plant shadow</span><b id="v-plant"></b></span></label>' +
       '<label><span class="row"><span>Vine shadow</span><b id="v-vine"></b></span></label>' +
+      '<label><span class="row"><span>Branch (top-left)</span><b id="v-branch"></b></span></label>' +
       '<label><span class="row"><span>Wordmark face</span><b id="v-wmfont"></b></span></label>' +
       '<label><span class="row"><span>Background</span><b id="v-bgsrc"></b></span></label>' +
       '<div class="btns"><button id="dev-bgsrc">BG</button></div>' +
       '<div class="btns"><button id="dev-copy">Copy CSS</button><button id="dev-reset">Reset</button></div>' +
       '<p class="hint">Z / X switch the wordmark face. ' +
       'WASD moves the plant shadow, R rotates it. IJKL moves ' +
-      'the top-right vine, O rotates it. B swaps the wall between ' +
+      'the top-right vine, O rotates it. YGHJ moves the top-left ' +
+      'branch, U rotates it. B swaps the wall between ' +
       'temp.jpg and background.svg; the cast shadow layers over either. ' +
       'Hold shift for fine steps / the other ' +
       'way. Zoom simulates a larger screen so padding reads true.</p>';
@@ -437,7 +452,10 @@
         '  --plant-rot: ' + plant.r + 'deg;\n' +
         '  --vine-x: ' + vine.x + 'px;\n' +
         '  --vine-y: ' + vine.y + 'px;\n' +
-        '  --vine-rot: ' + vine.r + 'deg;\n}\n' +
+        '  --vine-rot: ' + vine.r + 'deg;\n' +
+        '  --branch-x: ' + branch.x + 'px;\n' +
+        '  --branch-y: ' + branch.y + 'px;\n' +
+        '  --branch-rot: ' + branch.r + 'deg;\n}\n' +
         '/* main.js */ BG_RATE = ' + byId('bg').val + '; EASE = ' + byId('ease').val + ';';
       var btn = e.currentTarget;
       if (navigator.clipboard) navigator.clipboard.writeText(css);
@@ -451,11 +469,13 @@
       ['--pad','--maxw','--proj-gap','--zoom','--hero-scale','--bg-zoom','--bg-img',
        '--wm-font','--wm-scale','--wm-ls','--wm-weight',
        '--plant-x','--plant-y','--plant-rot',
-       '--vine-x','--vine-y','--vine-rot'].forEach(function (p) {
+       '--vine-x','--vine-y','--vine-rot',
+       '--branch-x','--branch-y','--branch-rot'].forEach(function (p) {
         root.style.removeProperty(p);
       });
       plant.x = -24; plant.y = 1520; plant.r = 0; applyPlant();
-      vine.x = -1136; vine.y = -1192; vine.r = 184; applyVine();
+      vine.x = 48; vine.y = -1616; vine.r = 379; applyVine();
+      branch.x = 0; branch.y = 0; branch.r = 0; applyBranch();
       wmIdx = 0; applyWm();
       bgSrc = 0; applyBg();
       zoom = 1; BG_RATE = 0.28; EASE = 0.07;
@@ -493,7 +513,8 @@
     var step = e.shiftKey ? 1 : PLANT_STEP;
     var turn = e.shiftKey ? -PLANT_TURN : PLANT_TURN;
 
-    // WASD / R drive the bottom-left plant, IJKL / O the top-right vine
+    // WASD / R drive the bottom-left plant, the arrows / O the top-right
+    // vine, YGHJ / U the top-left branch
     if (key === 'b') { e.preventDefault(); cycleBg(); return; }
     if (key === 'z') { e.preventDefault(); cycleWm(-1); return; }
     if (key === 'x') { e.preventDefault(); cycleWm(1);  return; }
@@ -503,16 +524,22 @@
     else if (key === 'w') plant.y -= step;
     else if (key === 's') plant.y += step;
     else if (key === 'r') plant.r = +(plant.r + turn).toFixed(1);
-    else if (key === 'j') vine.x -= step;
-    else if (key === 'l') vine.x += step;
-    else if (key === 'i') vine.y -= step;
-    else if (key === 'k') vine.y += step;
+    else if (key === 'arrowleft')  vine.x -= step;
+    else if (key === 'arrowright') vine.x += step;
+    else if (key === 'arrowup')    vine.y -= step;
+    else if (key === 'arrowdown')  vine.y += step;
     else if (key === 'o') vine.r = +(vine.r + turn).toFixed(1);
+    else if (key === 'g') branch.x -= step;
+    else if (key === 'j') branch.x += step;
+    else if (key === 'y') branch.y -= step;
+    else if (key === 'h') branch.y += step;
+    else if (key === 'u') branch.r = +(branch.r + turn).toFixed(1);
     else return;
 
     e.preventDefault();
     applyPlant();
     applyVine();
+    applyBranch();
     save();
   });
 })();

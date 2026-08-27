@@ -5,12 +5,12 @@
 
 :root{
   --ink: #000;
-  --rule: rgba(0,0,0,.14);
+  --rule: rgba(0,0,0,.22);
 
   /* The two knobs dev mode (press T) edits live */
   --pad: 12.1vw;                        /* breathing room at the screen edges */
   --maxw: 1130px;                       /* centred content column */
-  --proj-gap: 108px;                    /* vertical space between projects;
+  --proj-gap: 54px;                    /* vertical space between projects;
                                            goes negative to interlock them */
   --hero-scale: 1.16;                   /* multiplies the whole hero type curve */
 
@@ -31,10 +31,16 @@
   --plant-y: 1520px;
   --plant-rot: 0deg;
 
-  /* The top-right vine has its own rig, driven by IJKL / U in dev mode */
-  --vine-x: -1136px;
-  --vine-y: -1192px;
-  --vine-rot: 184deg;
+  /* The top-left branch - the bottom mass flipped over - on YGHJ / U in
+     dev mode */
+  --branch-x: 0px;
+  --branch-y: 0px;
+  --branch-rot: 0deg;
+
+  /* The top-right vine has its own rig, driven by the arrow keys / O */
+  --vine-x: 48px;
+  --vine-y: -1616px;
+  --vine-rot: 379deg;
   --bg-zoom: 1;                         /* scales the wall photo only. The .bg
                                            box already matches the photo's
                                            portrait ratio, so 1 shows it whole;
@@ -57,7 +63,7 @@ body{
   color:var(--ink);
   background:var(--ground);
   overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing:subpixel-antialiased;
   text-rendering:optimizeLegibility;
 }
 
@@ -200,6 +206,14 @@ body{
   transform-origin:14% 86%;
 }
 
+/* The pointer's handle on the bottom-left mass. breeze.js writes a few
+   pixels of lean here; the per-leaf drift keeps running underneath. */
+.lean{
+  position:absolute; inset:0;
+  transform-origin:8% 96%;
+  will-change:transform;
+}
+
 .leaf{
   --k:1;
   --s:calc(var(--pw) * var(--k));
@@ -208,20 +222,63 @@ body{
   left:calc(var(--s) * -.11);
   bottom:calc(var(--s) * -.09);
   transform-origin:10% 94%;      /* pivot near the pot, not the leaf tips */
-  --sway:1;                      /* one knob for the whole breeze */
-  will-change:transform;
+  --sway:1;                      /* this layer's share of the draught */
+
+  /* How far the draught carries, at --sway:1. Wider than it is tall,
+     because wind is mostly sideways. Every layer reads these three. */
+  --ax:13px;
+  --ay:7px;
+  --ar:1.1deg;
+
+  will-change:translate, rotate;
+
+  /* Two cycles at once, on two separate properties.
+
+     Waypoints cannot do this. An eased curve between stops drops the
+     velocity to zero at every one of them, so the leaves park - which is
+     what "it stops moving" was. A point going round an ellipse at constant
+     speed never stops and never turns a corner, so leaf-drift is twelve
+     stops around one, interpolated linearly.
+
+     One ellipse on its own is still a visible loop, so rotate runs a second
+     cycle on a period that shares no multiple with the first. The two never
+     return to the same combined position, and the sum never repeats inside
+     any time anyone will sit here. translate and rotate are independent
+     animatable properties, so both ride the same element with no wrapper
+     and no per-frame JS - the compositor owns all of it. */
+  animation-name:leaf-drift, leaf-turn;
+  animation-duration:7s, 4.9s;
   animation-iteration-count:infinite;
-  animation-timing-function:cubic-bezier(.42,0,.58,1);
+  animation-timing-function:linear;
 }
 
-/* Deepest layer is biggest and softest; each has its own period and a
-   negative delay, so the layers never line up into a visible sway. */
-.l1{ --k:1.24; opacity:.5;  filter:blur(1.15vmax); animation-name:drift-a; animation-duration:46s; animation-delay:-11s; }
-.l2{ --k:1.02; opacity:.5;  filter:blur(.85vmax); animation-name:drift-b; animation-duration:37s; animation-delay:-27s; }
-.l3{ --k:.82;  opacity:.46; filter:blur(.6vmax);   animation-name:drift-c; animation-duration:57s; animation-delay:-6s;  }
-.l4{ --k:.70;  opacity:.38; filter:blur(.75vmax); animation-name:drift-d; animation-duration:33s; animation-delay:-38s; }
-.l5{ --k:.95;  opacity:.34; filter:blur(.5vmax);  animation-name:drift-e; animation-duration:43s; animation-delay:-19s; }
-.l6{ --k:.88;  opacity:.40; filter:blur(.9vmax);  animation-name:drift-f; animation-duration:29s; animation-delay:-7s;  }
+/* Deepest layer is biggest and softest. The two periods and the negative
+   delays are per layer: no pair of periods shares a multiple, no two layers
+   share a period, and every layer starts somewhere else in its cycle - so
+   the nine of them never line up, here or thirty minutes from now.
+
+   Periods are around ten seconds, not forty. Forty was arithmetic, not
+   observation: thirteen pixels spread over forty seconds is a third of a
+   pixel a second, which is under what the eye reads as motion at all -
+   so the wall looked dead between the load gust and the next one. */
+.l1{ --k:1.24; --sway:1;    opacity:.5;  filter:blur(1.15vmax);
+     animation-duration:7.7s, 5.2s;     animation-delay:-2.7s, -1.1s; }
+.l2{ --k:1.02; --sway:.88;  opacity:.5;  filter:blur(.85vmax);
+     animation-duration:6.6s, 4.6s;     animation-delay:-6.8s, -4.9s; }
+.l3{ --k:.82;  --sway:.76;  opacity:.46; filter:blur(.6vmax);
+     animation-duration:8.8s, 5.7s;     animation-delay:-1.5s, -5.8s; }
+.l4{ --k:.70;  --sway:.64;  opacity:.38; filter:blur(.75vmax);
+     animation-duration:6s, 4.1s;       animation-delay:-7.9s, -2.1s; }
+.l5{ --k:.95;  --sway:.82;  opacity:.34; filter:blur(.5vmax);
+     animation-duration:7.2s, 5s;       animation-delay:-4.8s, -6.3s; }
+
+/* The vine. It used to run its own rig - two nested pendulums driven off
+   phasors in breeze.js, on top of its own leaf turn - which is why the
+   top-right corner was always the busiest thing on the wall. Same draught
+   as everything else now, and the smallest share of it: it hangs high and
+   alone up there, so it shows every pixel it is given. */
+.l6{ --k:.88;  --sway:.5;   opacity:.40; filter:blur(.9vmax);
+     animation-duration:9.2s, 6.1s;     animation-delay:-3.6s, -7.4s; }
 
 /* --- the gust ---
 
@@ -237,40 +294,89 @@ body{
    type cascade - but the peak itself is shallow, and everything after it
    runs long and eased. Per-keyframe timing functions are what buy that:
    the first segment snaps, the rest glide. A gust hits all at once and
-   leaves slowly; an even sway on one curve reads mechanical. */
+   leaves slowly; an even sway on one curve reads mechanical.
+
+   How slowly it leaves is the whole trick. Each counter-swing used to be
+   under half the last, which spends the gust in under two seconds and
+   drops the wall onto the ambient drift like a step. They are about .7 of
+   the one before now, over twice the time - by the time the swings are
+   down to a tenth of a degree they are already smaller than the draught
+   that carries on underneath, so there is no moment where it visibly
+   hands over. It just stops being the loudest thing in the room. */
 .gust{
   position:absolute; inset:0;
   transform-origin:8% 96%;        /* down at the pot */
-  animation:gust 4.6s ease-in-out .1s 1 both;
+
+  /* Two winds on one pivot. The opening gust is a one-shot and owns
+     `transform`; the recurring one is a loop and owns `rotate`, which is a
+     separate animatable property - so they add up on the same element
+     without either having to know about the other, and the big one can
+     still be ringing down while the small ones have already started. */
+  animation:gust 9.4s ease-in-out .1s 1 both,
+            gust-pulse 3s ease-in-out infinite;
 }
-.gust-b{
-  transform-origin:92% 4%;        /* the vine pivots where it hangs */
-  animation-name:gust-b;
-  animation-duration:5.2s;
-  animation-delay:.22s;           /* the far side catches the wind late */
-}
+/* Same breath, same instant, same direction - only the pivot differs, and
+   only because these two hang from different corners. */
+.gust-b{ transform-origin:92% 4%; }
 
 @keyframes gust{
   0%  { transform:rotate(0deg);   animation-timing-function:cubic-bezier(.1,.86,.24,1); }
-  6%  { transform:rotate(-.85deg); }
-  19% { transform:rotate(.4deg); }
-  36% { transform:rotate(-.19deg); }
-  57% { transform:rotate(.08deg); }
-  78% { transform:rotate(-.03deg); }
+  4%  { transform:rotate(-.95deg); }
+  14% { transform:rotate(.64deg); }
+  26% { transform:rotate(-.44deg); }
+  39% { transform:rotate(.31deg); }
+  52% { transform:rotate(-.22deg); }
+  65% { transform:rotate(.16deg); }
+  78% { transform:rotate(-.11deg); }
+  90% { transform:rotate(.06deg); }
   100%{ transform:rotate(0deg); }
 }
 
-/* The vine hangs from the other corner, so the same breeze turns it the
-   other way and holds on a little longer. */
-@keyframes gust-b{
-  0%  { transform:rotate(0deg);   animation-timing-function:cubic-bezier(.09,.88,.22,1); }
-  5%  { transform:rotate(1.02deg); }
-  17% { transform:rotate(-.48deg); }
-  33% { transform:rotate(.23deg); }
-  53% { transform:rotate(-.1deg); }
-  75% { transform:rotate(.04deg); }
-  100%{ transform:rotate(0deg); }
+/* A breath every three seconds, a third the size of the opening one and
+   the same shape - catch, overswing, settle. It never quite finishes
+   settling before the next one arrives, which is what keeps it from
+   reading as a metronome: the mass is always somewhere in the middle of a
+   swing rather than waiting at rest for the next tick. All three masses
+   are on the same three seconds, so it is one draught crossing the room
+   and not three rooms with their own weather. */
+@keyframes gust-pulse{
+  0%  { rotate:0deg;    animation-timing-function:cubic-bezier(.16,.84,.3,1); }
+  13% { rotate:-.3deg;  }
+  42% { rotate:.17deg;  }
+  72% { rotate:-.08deg; }
+  100%{ rotate:0deg;    }
 }
+
+/* --- the top-left branch ---
+
+   Pinned to the first viewport like .plants, and driven by the same drift
+   keyframes - it is literally l1/l3/l5 with the group flipped about the
+   horizontal, so every stem hangs into the corner. Smaller and thinner than
+   the mass it came from: this one is an accent over the type, not a wall of
+   leaves, and at full weight it would fight the wordmark. */
+.branch{
+  left:0; right:0; top:0; bottom:auto;
+  height:calc(100svh / var(--zoom));
+  color:#a79d86;
+  mix-blend-mode:multiply;
+  transform:translate3d(var(--branch-x), var(--branch-y), 0) rotate(var(--branch-rot));
+  transform-origin:10% 8%;
+}
+
+.gust-c{ transform-origin:6% 4%; }
+
+/* The flipped leaves anchor to the top edge instead of the bottom one */
+.leaf.tl{
+  top:calc(var(--s) * -.09);
+  bottom:auto;
+  transform-origin:10% 6%;
+}
+.t1{ --k:.92; --sway:.72; opacity:.34; filter:blur(1.05vmax);
+     animation-duration:8.2s, 5.5s;     animation-delay:-5.5s, -3.3s; }
+.t2{ --k:.74; --sway:.6;  opacity:.30; filter:blur(.7vmax);
+     animation-duration:6.4s, 4.4s;     animation-delay:-2.3s, -5.1s; }
+.t3{ --k:.62; --sway:.48; opacity:.24; filter:blur(.55vmax);
+     animation-duration:8.5s, 5.9s;     animation-delay:-8.7s, -4.4s; }
 
 /* Its own placement rig, so the drift keyframes on .l6 stay free to run
    inside it - the same trick .plants uses for the bottom-left mass. */
@@ -288,61 +394,45 @@ body{
   transform-origin:90% 6%;
 }
 
-/* Irregular stops on purpose - nothing lands on an even beat. */
-@keyframes drift-a{
-  0%  { transform:none; }
-  19% { transform:translate3d(calc(var(--sway) * 14px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * 1.3deg)); }
-  37% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * -0.7deg)); }
-  58% { transform:translate3d(calc(var(--sway) * 22px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * 1.85deg)); }
-  74% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * 0.45deg)); }
-  89% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * -1.05deg)); }
-  100%{ transform:none; }
-}
-@keyframes drift-b{
-  0%  { transform:none; }
-  23% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -1.25deg)); }
-  41% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * 0.9deg)); }
-  63% { transform:translate3d(calc(var(--sway) * -18px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * -1.95deg)); }
-  81% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 13px),0) rotate(calc(var(--sway) * 0.6deg)); }
-  100%{ transform:none; }
-}
-@keyframes drift-c{
-  0%  { transform:none; }
-  16% { transform:translate3d(calc(var(--sway) * 18px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * 1.6deg)); }
-  34% { transform:translate3d(calc(var(--sway) * -5px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * -0.45deg)); }
-  52% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 13px),0) rotate(calc(var(--sway) * 2.2deg)); }
-  69% { transform:translate3d(calc(var(--sway) * -18px),calc(var(--sway) * 0px),0) rotate(calc(var(--sway) * -1.5deg)); }
-  87% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -9px),0) rotate(calc(var(--sway) * 0.8deg)); }
-  100%{ transform:none; }
-}
-@keyframes drift-d{
-  0%  { transform:none; }
-  27% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * -2.2deg)); }
-  46% { transform:translate3d(calc(var(--sway) * 13px),calc(var(--sway) * 5px),0) rotate(calc(var(--sway) * 1.15deg)); }
-  68% { transform:translate3d(calc(var(--sway) * -5px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -0.55deg)); }
-  84% { transform:translate3d(calc(var(--sway) * 18px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * 2.45deg)); }
-  100%{ transform:none; }
-}
-@keyframes drift-e{
-  0%  { transform:none; }
-  21% { transform:translate3d(calc(var(--sway) * 9px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * 1.95deg)); }
-  39% { transform:translate3d(calc(var(--sway) * -13px),calc(var(--sway) * -5px),0) rotate(calc(var(--sway) * -1.35deg)); }
-  57% { transform:translate3d(calc(var(--sway) * 5px),calc(var(--sway) * -13px),0) rotate(calc(var(--sway) * 0.9deg)); }
-  79% { transform:translate3d(calc(var(--sway) * -9px),calc(var(--sway) * 9px),0) rotate(calc(var(--sway) * -2.05deg)); }
-  100%{ transform:none; }
+
+/* --- the draught ---
+
+   leaf-drift traces an ellipse, wider than it is tall because wind is
+   mostly sideways; leaf-turn is a sine about the stem. Both are read at
+   constant speed, both are scaled by the layer's own --sway, and neither
+   ever holds still. The reach is --ax / --ay / --ar on .leaf; the numbers
+   below are only the twelve points of the circle. */
+
+@keyframes leaf-drift{
+        0%{ translate:calc(var(--sway) * var(--ax)) 0; }
+   8.3333%{ translate:calc(var(--sway) * var(--ax) * 0.866) calc(var(--sway) * var(--ay) * 0.5); }
+  16.6667%{ translate:calc(var(--sway) * var(--ax) * 0.5) calc(var(--sway) * var(--ay) * 0.866); }
+       25%{ translate:0 calc(var(--sway) * var(--ay)); }
+  33.3333%{ translate:calc(var(--sway) * var(--ax) * -0.5) calc(var(--sway) * var(--ay) * 0.866); }
+  41.6667%{ translate:calc(var(--sway) * var(--ax) * -0.866) calc(var(--sway) * var(--ay) * 0.5); }
+       50%{ translate:calc(var(--sway) * var(--ax) * -1) 0; }
+  58.3333%{ translate:calc(var(--sway) * var(--ax) * -0.866) calc(var(--sway) * var(--ay) * -0.5); }
+  66.6667%{ translate:calc(var(--sway) * var(--ax) * -0.5) calc(var(--sway) * var(--ay) * -0.866); }
+       75%{ translate:0 calc(var(--sway) * var(--ay) * -1); }
+  83.3333%{ translate:calc(var(--sway) * var(--ax) * 0.5) calc(var(--sway) * var(--ay) * -0.866); }
+  91.6667%{ translate:calc(var(--sway) * var(--ax) * 0.866) calc(var(--sway) * var(--ay) * -0.5); }
+      100%{ translate:calc(var(--sway) * var(--ax)) 0; }
 }
 
-/* The bottom-left mass gets its life from five layers of different sizes
-   sliding over each other. The vine is one layer, so it has to carry the
-   breeze on its own - wider throw, shorter period, more turn. */
-@keyframes drift-f{
-  0%  { transform:none; }
-  17% { transform:translate3d(calc(var(--sway) * -26px),calc(var(--sway) * 16px),0) rotate(calc(var(--sway) * -2.4deg)); }
-  34% { transform:translate3d(calc(var(--sway) * 18px),calc(var(--sway) * -12px),0) rotate(calc(var(--sway) * 1.6deg)); }
-  56% { transform:translate3d(calc(var(--sway) * -34px),calc(var(--sway) * -18px),0) rotate(calc(var(--sway) * -3.4deg)); }
-  71% { transform:translate3d(calc(var(--sway) * 12px),calc(var(--sway) * 22px),0) rotate(calc(var(--sway) * 0.9deg)); }
-  88% { transform:translate3d(calc(var(--sway) * -20px),calc(var(--sway) * -8px),0) rotate(calc(var(--sway) * -1.8deg)); }
-  100%{ transform:none; }
+@keyframes leaf-turn{
+        0%{ rotate:0deg; }
+   8.3333%{ rotate:calc(var(--sway) * var(--ar) * 0.5); }
+  16.6667%{ rotate:calc(var(--sway) * var(--ar) * 0.866); }
+       25%{ rotate:calc(var(--sway) * var(--ar)); }
+  33.3333%{ rotate:calc(var(--sway) * var(--ar) * 0.866); }
+  41.6667%{ rotate:calc(var(--sway) * var(--ar) * 0.5); }
+       50%{ rotate:0deg; }
+  58.3333%{ rotate:calc(var(--sway) * var(--ar) * -0.5); }
+  66.6667%{ rotate:calc(var(--sway) * var(--ar) * -0.866); }
+       75%{ rotate:calc(var(--sway) * var(--ar) * -1); }
+  83.3333%{ rotate:calc(var(--sway) * var(--ar) * -0.866); }
+  91.6667%{ rotate:calc(var(--sway) * var(--ar) * -0.5); }
+      100%{ rotate:0deg; }
 }
 
 /* --- ledge / baseboard --- */
@@ -410,10 +500,10 @@ body{
 }
 
 .eyebrow{
-  font-size:.8125rem;
-  letter-spacing:.24em;
+  font-size:1rem;
+  letter-spacing:.2em;
   text-transform:uppercase;
-  opacity:.6;
+  opacity:.78;
 }
 
 .wordmark{
@@ -439,9 +529,9 @@ body{
 .lede{
   margin-top:clamp(1.5rem,3vw,2.5rem);
   max-width:30ch;
-  font-size:calc(clamp(1.0625rem,1.6vw,1.3125rem) * min(var(--hero-scale), 1.35));
-  line-height:1.5;
-  opacity:.75;
+  font-size:calc(clamp(1.1875rem,1.85vw,1.5rem) * min(var(--hero-scale), 1.35));
+  line-height:1.55;
+  opacity:.86;
 }
 
 /* ---------- projects ---------- */
@@ -474,31 +564,33 @@ a.project{ color:inherit; text-decoration:none; }
 a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 
 
-/* Wireframe placeholder for the eventual image */
+/* Every project is a print in a mat: an outer edge, a border set in from
+   it, and the work itself shrunk to sit inside that border rather than
+   running under it. --mat is what keeps the two in register - the border
+   and whatever fills it are inset by the same amount, so changing it once
+   moves both. */
 .frame{
+  --mat:clamp(10px,2.2%,22px);
   position:relative;
   aspect-ratio:4/3;
   border:1px solid var(--rule);
   background:rgba(255,255,255,.16);
   overflow:hidden;
 }
-.frame-in{
-  position:absolute; inset:0;
-  background:
-    linear-gradient(to top right, transparent calc(50% - .5px), var(--rule) 50%, transparent calc(50% + .5px)),
-    linear-gradient(to top left,  transparent calc(50% - .5px), var(--rule) 50%, transparent calc(50% + .5px));
-}
 .frame::after{
   content:"";
-  position:absolute; inset:clamp(10px,2.2%,22px);
+  position:absolute; inset:var(--mat);
   border:1px solid var(--rule);
+  pointer-events:none;
+  z-index:1;                          /* the border stays over the print */
 }
 
-/* A card that has real imagery drops the wireframe: the inner hairline
-   would sit over the screenshot rather than around it, and the pale fill
-   would show through every cross-fade. */
-.frame.has-shots{ background:#0a0a0a; }
-.frame.has-shots::after{ display:none; }
+/* Placeholder until a project has its own imagery: a plain white field,
+   the same size and place the real screenshots take. */
+.frame-in{
+  position:absolute; inset:var(--mat);
+  background:#fff;
+}
 
 /* BSFFR is three shots of one round - the door, the vote, the reveal - so
    the frame plays them in order instead of picking one. Each holds four
@@ -506,7 +598,10 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
    is later in the DOM, so it fades in on top of the outgoing one and the
    handoff never shows the frame underneath. The cycle is tied to .in, the
    class the scroll observer already sets, so it costs nothing offscreen. */
-.shots{ position:absolute; inset:0; }
+.shots{
+  position:absolute; inset:var(--mat);
+  background:#0a0a0a;                 /* what the dissolves happen over */
+}
 .shots img{
   position:absolute; inset:0;
   width:100%; height:100%;
@@ -538,33 +633,33 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 }
 .meta p{
   margin-top:.45rem;
-  font-size:.9375rem;
-  letter-spacing:.02em;
-  opacity:.62;
+  font-size:1.125rem;
+  letter-spacing:.01em;
+  opacity:.8;
 }
 
 /* ---------- project detail ----------
 
    The description and stack live in the empty half of the column, on the
    card's outer side: a left card opens to its right, a right card to its
-   left. Closed, the panel is clipped to nothing against the card's edge, so
-   opening reads as the text being drawn out of the card rather than fading
-   in on top of the page. The cursor drives it - target-cursor.js marks the
-   element it has latched onto with .is-cursor - and :hover is the fallback
-   wherever the custom cursor bows out. */
+   left. The description is simply there - it is what the project is, and
+   reading it should not cost a hover. The stack is the reward: closed, it
+   is clipped to nothing against the card's edge, so opening reads as the
+   list being drawn out of the card rather than fading in on top of the
+   page. The cursor drives it - target-cursor.js marks the element it has
+   latched onto with .is-cursor - and :hover is the fallback wherever the
+   custom cursor bows out. */
 
 .detail{
   position:absolute;
   top:0;
   width:min(74%, 360px);
   pointer-events:none;              /* never steals the card's hit area */
-  opacity:0;
-  transition:opacity .5s var(--ease), clip-path .62s var(--ease), transform .62s var(--ease);
 }
 .detail p{
-  font-size:.9375rem;
+  font-size:1.125rem;
   line-height:1.6;
-  opacity:.72;
+  opacity:.88;
 }
 .stack{
   display:flex;
@@ -575,57 +670,50 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   border-top:1px solid var(--rule);
   list-style:none;
   opacity:0;
-  transform:translate3d(0,.45rem,0);
-  transition:opacity .45s var(--ease), transform .45s var(--ease);
+  transition:opacity .45s var(--ease), clip-path .62s var(--ease), transform .62s var(--ease);
 }
 .stack li{
   padding:.3rem .6rem;
   border:1px solid var(--rule);
   border-radius:2px;
-  font-size:.6875rem;
-  letter-spacing:.14em;
+  font-size:.8125rem;
+  letter-spacing:.1em;
   text-transform:uppercase;
-  opacity:.62;
+  opacity:.82;
 }
 
 /* Side, and the direction the clip travels with it */
 .project.left  .detail{
   left:calc(100% + clamp(1.5rem,3vw,2.75rem));
-  clip-path:inset(0 100% 0 0);
-  transform:translate3d(-.75rem,0,0);
 }
 .project.right .detail{
   right:calc(100% + clamp(1.5rem,3vw,2.75rem));
-  clip-path:inset(0 0 0 100%);
-  transform:translate3d(.75rem,0,0);
   text-align:right;
 }
-.project.right .stack{ justify-content:flex-end; }
+.project.left  .stack{
+  clip-path:inset(0 100% 0 0);
+  transform:translate3d(-.75rem,0,0);
+}
+.project.right .stack{
+  justify-content:flex-end;
+  clip-path:inset(0 0 0 100%);
+  transform:translate3d(.75rem,0,0);
+}
 
-/* Open. The stack follows the paragraph rather than arriving with it. */
+/* Open */
 .project.is-cursor{ z-index:3; }     /* clears the interlocked neighbour */
-.project.is-cursor .detail{
+.project.is-cursor .stack{
   opacity:1;
   clip-path:inset(0 0 0 0);
   transform:translate3d(0,0,0);
 }
-.project.is-cursor .stack{
-  opacity:1;
-  transform:none;
-  transition-delay:.16s;
-}
 
 @media (hover:hover){
   .project:hover{ z-index:3; }
-  .project:hover .detail{
+  .project:hover .stack{
     opacity:1;
     clip-path:inset(0 0 0 0);
     transform:translate3d(0,0,0);
-  }
-  .project:hover .stack{
-    opacity:1;
-    transform:none;
-    transition-delay:.16s;
   }
 }
 
@@ -647,14 +735,14 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   position:relative;
   display:inline-flex;
   align-items:center;
-  gap:.9rem;
+  justify-content:center;
   height:var(--h);
   padding:0 clamp(1.75rem,3.5vw,2.75rem);
   border:1px solid var(--ink);
   border-radius:calc(var(--h)/2);
   color:var(--ink);
   text-decoration:none;
-  font-size:clamp(.9375rem,1.3vw,1.0625rem);
+  font-size:clamp(1.0625rem,1.5vw,1.25rem);
   letter-spacing:-.01em;
   overflow:hidden;
   isolation:isolate;
@@ -662,25 +750,23 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 }
 .cta::before{
   content:"";
-  position:absolute; inset:0; z-index:-1;
+  position:absolute; left:0; right:0; bottom:0; height:145%; z-index:-1;
   background:var(--ink);
-  transform:translate3d(0,101%,0);
-  transition:transform .6s var(--ease);
+  transform:translate3d(0,100%,0);
+  transition:transform .55s cubic-bezier(.32,.72,0,1);
 }
-.cta svg{ transition:transform .6s var(--ease); }
 
 @media (hover:hover){
   .cta:hover{ color:#fff; }
   .cta:hover::before{ transform:translate3d(0,0,0); }
-  .cta:hover svg{ transform:translate3d(.3rem,0,0); }
 }
 .cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
 
 .fine{
-  font-size:.8125rem;
-  letter-spacing:.14em;
+  font-size:1rem;
+  letter-spacing:.12em;
   text-transform:uppercase;
-  opacity:.5;
+  opacity:.72;
 }
 
 /* ---------- reveal ---------- */
@@ -706,14 +792,17 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 /* A project card reveals as image-then-caption, not as one block */
 .project[data-r]{ opacity:1; transform:none; }
 .project[data-r] .frame,
-.project[data-r] .meta{
+.project[data-r] .meta,
+.project[data-r] .detail{
   opacity:0;
   transform:translate3d(0,24px,0);
   transition:opacity .9s var(--ease), transform 1.1s var(--ease);
 }
 .project[data-r] .meta{ transition-delay:.12s; }
+.project[data-r] .detail{ transition-delay:.22s; }
 .project[data-r].in .frame,
-.project[data-r].in .meta{
+.project[data-r].in .meta,
+.project[data-r].in .detail{
   opacity:1;
   transform:translate3d(0,0,0);
 }
@@ -735,15 +824,17 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   .project.right .detail{
     position:static;
     width:100%;
+    text-align:left;
+    margin-top:-.25rem;
+  }
+  .project.left .stack,
+  .project.right .stack{
+    justify-content:flex-start;
     opacity:1;
     clip-path:none;
     transform:none;
     transition:none;
-    text-align:left;
-    margin-top:-.25rem;
   }
-  .project.right .stack{ justify-content:flex-start; }
-  .stack{ opacity:1; transform:none; transition:none; }
 }
 
 /* ---------- dev overlay (press T) ---------- */
