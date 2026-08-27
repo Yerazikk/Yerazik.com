@@ -272,6 +272,25 @@
     save();
   }
 
+  /* ---------- cursor target shape: C cycles it ----------
+     target-cursor.js owns the list and remembers the choice itself; this is
+     only the button and the label. It is missing entirely where the custom
+     cursor bailed out (reduced motion, touch), so every call is guarded. */
+
+  function tc() { return window.TargetCursor || null; }
+
+  function applyCursorLabel() {
+    var out = dev && dev.querySelector('#v-cursor');
+    if (!out) return;
+    out.textContent = tc() ? tc().modeName() : 'off';
+  }
+
+  function cycleCursor(d) {
+    if (!tc()) return;
+    tc().cycle(d);
+    applyCursorLabel();
+  }
+
   function devOpen() { return !!dev && dev.style.display !== 'none'; }
 
   // Tell the rest of the page the panel is up. target-cursor.js listens and
@@ -397,15 +416,23 @@
       '<label><span class="row"><span>Branch (top-left)</span><b id="v-branch"></b></span></label>' +
       '<label><span class="row"><span>Wordmark face</span><b id="v-wmfont"></b></span></label>' +
       '<label><span class="row"><span>Background</span><b id="v-bgsrc"></b></span></label>' +
-      '<div class="btns"><button id="dev-bgsrc">BG</button></div>' +
+      '<label><span class="row"><span>Cursor target</span><b id="v-cursor"></b></span></label>' +
+      '<div class="btns"><button id="dev-bgsrc">BG</button>' +
+      '<button id="dev-cursor">Cursor →</button></div>' +
       '<div class="btns"><button id="dev-copy">Copy CSS</button><button id="dev-reset">Reset</button></div>' +
-      '<p class="hint">Z / X switch the wordmark face. ' +
+      '<details class="hint"><summary>Keys</summary>' +
+      'C cycles what the target cursor grabs - the ' +
+      'picture card, the picture alone, the project name, the stack ' +
+      'squares, or the whole project across its description. C works ' +
+      'with the panel closed too, which is the only way to watch the ' +
+      'bracket move. ' +
+      'Z / X switch the wordmark face. ' +
       'WASD moves the plant shadow, R rotates it. IJKL moves ' +
       'the top-right vine, O rotates it. YGHJ moves the top-left ' +
       'branch, U rotates it. B swaps the wall between ' +
       'temp.jpg and background.svg; the cast shadow layers over either. ' +
       'Hold shift for fine steps / the other ' +
-      'way. Zoom simulates a larger screen so padding reads true.</p>';
+      'way. Zoom simulates a larger screen so padding reads true.</details>';
     dev.innerHTML = html;
     document.body.appendChild(dev);
 
@@ -426,6 +453,7 @@
     applyVine();
     applyWm();
     applyBg();
+    applyCursorLabel();
 
     setMin(devMin);
     dev.querySelector('#dev-min').addEventListener('click', function () {
@@ -434,6 +462,7 @@
     });
 
     dev.querySelector('#dev-bgsrc').addEventListener('click', cycleBg);
+    dev.querySelector('#dev-cursor').addEventListener('click', function () { cycleCursor(1); });
 
     dev.querySelector('#dev-copy').addEventListener('click', function (e) {
       var css = ':root{\n' +
@@ -478,6 +507,7 @@
       branch.x = 0; branch.y = 0; branch.r = 0; applyBranch();
       wmIdx = 0; applyWm();
       bgSrc = 0; applyBg();
+      if (tc()) { tc().set('card'); applyCursorLabel(); }
       zoom = 1; BG_RATE = 0.28; EASE = 0.07;
       byId('pad').val = null; seedPad();
       byId('gap').val = 32;
@@ -507,6 +537,8 @@
       devMode(devOpen());
       return;
     }
+
+    if (key === 'c' && dev) { e.preventDefault(); cycleCursor(e.shiftKey ? -1 : 1); return; }
 
     if (!devOpen()) return;
 

@@ -39,9 +39,9 @@
     // held target gets in the contest against its neighbours, so the latch
     // does not flicker along the seam between two cards.
     gravity: true,
-    gravityRadius: 130,         // px outside the box where the pull begins
+    gravityRadius: 70,          // px outside the box where the pull begins
     gravityPull: 0.5,
-    gravityStick: 45,           // px of favouritism for the held target
+    gravityStick: 25,           // px of favouritism for the held target
     scanEvery: 0.06,            // seconds between proximity scans
 
     // The wrapper is blended with `difference`, as in the original. On this
@@ -54,6 +54,75 @@
 
   var CORNER = 12;   // corner box, px - must match the CSS
   var BORDER = 3;    // its stroke width, px - must match the CSS
+
+  /* ---------- what the bracket is allowed to grab ----------
+
+     One entry per shape worth trying. `sel` replaces CONFIG.targetSelector
+     while the mode is live; `box` lets a mode frame something larger than
+     the element it latched onto (the row mode measures the card together
+     with its description); `radius` / `stick` override gravity, because a
+     130px reach that feels right around a card is absurd around a 60px
+     stack chip. The wordmark and the mail button stay grabbable in every
+     mode - they are the opening pose and the only real button on the page.
+
+     Cycle live with C once dev mode has been opened once. */
+
+  var EXTRAS = '.wordmark, .cta, .nav a';
+
+  var MODES = [
+    { id: 'card',  name: 'Picture card (default)', sel: '.cursor-target' },
+    { id: 'frame', name: 'Picture only',           sel: '.project .frame, ' + EXTRAS },
+    { id: 'title', name: 'Project name',           sel: '.meta h2, ' + EXTRAS,
+      box: textBox },
+    { id: 'stack', name: 'Stack squares',          sel: '.stack li, ' + EXTRAS,
+      radius: 40, stick: 14 },
+    { id: 'row',   name: 'Whole project, wide',    sel: '.project, ' + EXTRAS,
+      radius: 100,
+      box: function (el) { return union(el, '.detail'); } }
+  ];
+
+  // Always opens on the full-card mode (index 0). Cycling with C during a
+  // dev session no longer persists across reloads - card is the one keeper.
+  var modeIdx = 0;
+
+  function mode()     { return MODES[modeIdx]; }
+  function selector() { return mode().sel; }
+  function radius()   { return mode().radius || CONFIG.gravityRadius; }
+  function stick()    { return mode().stick  || CONFIG.gravityStick; }
+
+  /* The element's own box, grown to swallow any `sel` it contains. */
+  function union(el, sel) {
+    var r = el.getBoundingClientRect();
+    var l = r.left, t = r.top, rr = r.right, b = r.bottom;
+    var kids = el.querySelectorAll(sel);
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i].getBoundingClientRect();
+      if (!k.width && !k.height) continue;
+      if (k.left < l) l = k.left;
+      if (k.top < t) t = k.top;
+      if (k.right > rr) rr = k.right;
+      if (k.bottom > b) b = k.bottom;
+    }
+    return { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t };
+  }
+
+  /* The inked width of the words, not the block they sit in. A heading is a
+     full-width block element, so measuring it frames a lot of empty column;
+     a range over its contents frames the name itself. */
+  function textBox(el) {
+    var r;
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      r = range.getBoundingClientRect();
+    } catch (e) {}
+    return (r && (r.width || r.height)) ? r : el.getBoundingClientRect();
+  }
+
+  function rectFor(el) {
+    var m = mode();
+    return m.box ? m.box(el) : el.getBoundingClientRect();
+  }
 
   /* ---------- bail out where a custom cursor is wrong ---------- */
 
@@ -171,20 +240,20 @@
   }
 
   function scan() {
-    var els = document.querySelectorAll(CONFIG.targetSelector);
+    var els = document.querySelectorAll(selector());
     var best = null, bestD = Infinity;
 
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
-      var r = el.getBoundingClientRect();
+      var r = rectFor(el);
       if (!r.width && !r.height) continue;
 
       var d = edgeDist(r, mx, my);
-      if (el === target) d -= CONFIG.gravityStick;   // incumbency
+      if (el === target) d -= stick();               // incumbency
       if (d < bestD) { bestD = d; best = el; }
     }
 
-    if (best && bestD <= CONFIG.gravityRadius) latch(best);
+    if (best && bestD <= radius()) latch(best);
     else if (target) unlatch();
   }
 
@@ -209,7 +278,7 @@
     var box = null, aimX = mx, aimY = my;
 
     if (target) {
-      var r = target.getBoundingClientRect();
+      var r = rectFor(target);
       var l = r.left - BORDER, t = r.top - BORDER;
       var rr = r.right + BORDER - CORNER, b = r.bottom + BORDER - CORNER;
       box = [[l, t], [rr, t], [rr, b], [l, b]];
@@ -223,7 +292,7 @@
         var ny = Math.min(Math.max(my, r.top), r.bottom) - my;
         var d = Math.sqrt(nx * nx + ny * ny);
         if (d > 0) {
-          var f = CONFIG.gravityPull * Math.max(0, 1 - d / CONFIG.gravityRadius);
+          var f = CONFIG.gravityPull * Math.max(0, 1 - d / radius());
           aimX = mx + nx * f;
           aimY = my + ny * f;
         }
@@ -262,7 +331,7 @@
         if (checkAt <= 0) {
           checkAt = 0.1;
           var under = document.elementFromPoint(px, py);
-          if (!under || (under !== target && under.closest(CONFIG.targetSelector) !== target)) unlatch();
+          if (!under || (under !== target && under.closest(selector()) !== target)) unlatch();
         }
       }
     } else if (release >= 0) {
@@ -330,7 +399,7 @@
 
   window.addEventListener('mouseover', function (e) {
     if (suspended) return;
-    var el = e.target && e.target.closest ? e.target.closest(CONFIG.targetSelector) : null;
+    var el = e.target && e.target.closest ? e.target.closest(selector()) : null;
     if (el) latch(el);
   }, { passive: true });
 
@@ -352,6 +421,52 @@
   document.addEventListener('mouseenter', function () {
     if (!suspended) wrap.classList.add('is-live');
   });
+
+  /* ---------- mode switching ----------
+     Dropping the latch matters: the held element almost certainly is not a
+     target under the new mode, and the scan would keep it alive on
+     incumbency alone. The toast is the only feedback there is, since the
+     dev panel is usually closed when you are actually looking at this. */
+
+  var toast = null, toastAt = 0;
+
+  function flash(text) {
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = 'tc-toast';
+      toast.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.classList.add('is-up');
+    clearTimeout(toastAt);
+    toastAt = setTimeout(function () { toast.classList.remove('is-up'); }, 1400);
+  }
+
+  function setMode(id, quiet) {
+    for (var i = 0; i < MODES.length; i++) {
+      if (MODES[i].id !== id) continue;
+      unlatch();
+      modeIdx = i;
+      checkAt = 0;                    // re-scan on the next frame
+      if (!quiet) flash('Cursor: ' + MODES[i].name);
+      start();
+      return MODES[i];
+    }
+    return null;
+  }
+
+  window.TargetCursor = {
+    modes: function () {
+      return MODES.map(function (m) { return { id: m.id, name: m.name }; });
+    },
+    mode: function () { return mode().id; },
+    modeName: function () { return mode().name; },
+    set: setMode,
+    cycle: function (d) {
+      return setMode(MODES[(modeIdx + (d || 1) + MODES.length) % MODES.length].id);
+    }
+  };
 
   /* ---------- opening pose ----------
      Sit on the wordmark, corners flying in from rest, until the pointer is

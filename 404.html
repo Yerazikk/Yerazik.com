@@ -20,7 +20,14 @@
    open wall upper-left, streetlamp upper-right, plant below.
 ----------------------------------------------------------------*/
 
-:root{ --ink:#f2efe8; --ground:#0d0f12; }
+:root{
+  --ink:#f2efe8;
+  --ground:#0d0f12;
+  /* The bracket's latch colour. target-cursor.js writes this inline on
+     :root, so the override has to shout; the site's purple belongs to
+     the daylight page, and this room is lit by a sodium lamp. */
+  --tc-color-on:#f2e3a4 !important;
+}
 
 body{
   color:var(--ink);
@@ -58,7 +65,15 @@ body{
     linear-gradient(to top, rgba(8,10,13,.5), rgba(8,10,13,0) 38%);
 }
 
-.lost .grain{ position:fixed; z-index:1; opacity:.32; mix-blend-mode:overlay; }
+/* The home page's tooth, inverted for a dark room: the same 3px dot
+   grid, drawn in light instead of black so it reads over the photo. */
+.lost .grain{
+  position:fixed;
+  z-index:1;
+  opacity:.55;
+  background-image:radial-gradient(rgba(255,255,255,.075) .5px, transparent .5px);
+  background-size:3px 3px;
+}
 
 .lost-in{
   position:relative;
@@ -134,8 +149,8 @@ body{
   <div class="lost-in">
     <p class="eyebrow" data-r>404</p>
     <h1 class="wordmark cursor-target" data-r>Lost in the dark?</h1>
-    <p class="lede" data-r>This page isn&rsquo;t here &mdash; or it never was. The way back is one click away.</p>
-    <a class="cta cursor-target" href="/" data-r><span>Back to the light</span></a>
+    <p class="lede" data-r>This page isnt here - or it never was 0.0</p>
+    <a class="cta cursor-target" href="/" data-r><span>Back</span></a>
   </div>
 </main>
 
