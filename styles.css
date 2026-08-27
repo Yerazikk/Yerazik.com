@@ -1045,7 +1045,6 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
    art, and every .frame image are never touched.
 --------------------------------------------------------------------*/
 
-body.tc-focus .nav > *:not(.is-cursor),
 body.tc-focus .hero > *:not(.is-cursor),
 body.tc-focus .project:not(.is-cursor) .meta,
 body.tc-focus .project:not(.is-cursor) .detail,
