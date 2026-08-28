@@ -44,6 +44,14 @@
     gravityStick: 25,           // px of favouritism for the held target
     scanEvery: 0.06,            // seconds between proximity scans
 
+    // The click animation, for a click that lands on nothing: the four
+    // corners shut into one solid box over the dot, hold a beat, then open
+    // back out with a small overshoot. A shutter. It is deliberately quick -
+    // this fires on every stray click, so anything longer would nag. While
+    // something is latched the click belongs to the target and this is
+    // suppressed entirely.
+    clickDuration: 0.275,       // seconds, start to finish
+
     // The wrapper is blended with `difference`, as in the original. On this
     // cream wall a plain white cursor would be invisible, so the blend is
     // what guarantees contrast - the trade is that the two colours above are
@@ -157,6 +165,14 @@
   var px = mx, py = my;                                          // cursor
   var rot = 0, scale = 1, wantScale = 1;
 
+  /* The same rest pose in polar, measured from each corner box's own centre.
+     The click animation works in radius-and-angle, not in x/y - collapsing
+     the bracket onto the dot is one number there and four here. */
+  var BASE = REST.map(function (p) {
+    var cx = p[0] + CORNER / 2, cy = p[1] + CORNER / 2;
+    return { a: Math.atan2(cy, cx), r: Math.sqrt(cx * cx + cy * cy) };
+  });
+
   var cur = [];                       // live corner offsets, cursor-local
   var from = [];                      // where a release started from
   for (var i = 0; i < 4; i++) { cur.push(REST[i].slice()); from.push(REST[i].slice()); }
@@ -169,12 +185,35 @@
   var running = false, last = 0;
   var suspended = false;              // dev panel open: OS cursor is back
   var moved = false;                  // the pointer has been used at least once
+  var clickT = -1;                    // seconds into the click shutter, -1 = idle
+  var pressed = false;                // mouse button currently held
 
   /* ---------- easing / frame-rate independent lerp ---------- */
 
   function lerpK(per60, dt) { return 1 - Math.pow(1 - per60, dt * 60); }
   function outQuad(t)  { return 1 - (1 - t) * (1 - t); }
+  function outCubic(t) { t = 1 - t; return 1 - t * t * t; }
   function outQuart(t) { t = 1 - t; return 1 - t * t * t * t; }
+  function outBack(t, k) { var c = k + 1; t = t - 1; return 1 + c*t*t*t + k*t*t; }
+
+  /* ---------- the click shutter ----------
+
+     `v` is how shut the bracket is: 0 the rest pose, 1 collapsed onto the
+     dot, where the four corner boxes overlap into a single closed square.
+     It shuts fast, holds while it is closed, then opens past the rest pose
+     and settles - the overshoot is the whole reason it reads as a shutter
+     and not as a shrink. Returns the corner radius multiplier and the dot's
+     scale, since the dot is swallowed by the box on the way in. */
+
+  var SHUT_IN = 0.34, SHUT_HOLD = 0.46;   // fractions of clickDuration
+
+  function shutter(t) {
+    var v;
+    if (t < SHUT_IN) v = outCubic(t / SHUT_IN);
+    else if (t < SHUT_HOLD) v = 1;
+    else v = 1 - outBack((t - SHUT_HOLD) / (1 - SHUT_HOLD), 1.4);
+    return { r: 1 - v, dot: 1 - 0.85 * v };
+  }
 
   /* ---------- latch / release ---------- */
 
@@ -186,6 +225,7 @@
     target = el;
     grip = 0;
     release = -1;
+    if (clickT >= 0) endClick();      // the click belongs to the target now
     checkAt = CONFIG.gravity ? CONFIG.scanEvery : 0.1;
     rot = 0;                          // the bracket stops spinning, square on
     wrap.classList.add('is-on');
@@ -325,6 +365,21 @@
           if (!under || (under !== target && under.closest(selector()) !== target)) unlatch();
         }
       }
+    } else if (clickT >= 0) {
+      // Click shutter. It owns the corners outright while it runs, and it
+      // ends exactly on the rest pose, so nothing has to catch it.
+      clickT += dt;
+      var sh = shutter(Math.min(1, clickT / CONFIG.clickDuration));
+
+      for (var s = 0; s < 4; s++) {
+        var rad = BASE[s].r * sh.r;
+        cur[s][0] = Math.cos(BASE[s].a) * rad - CORNER / 2;
+        cur[s][1] = Math.sin(BASE[s].a) * rad - CORNER / 2;
+      }
+      dot.style.transform = 'translate(-50%,-50%) scale(' + sh.dot.toFixed(3) + ')';
+
+      if (clickT >= CONFIG.clickDuration) endClick();
+      release = -1;
     } else if (release >= 0) {
       release += dt;
       var p = Math.min(1, release / 0.3), e = outQuart(p);
@@ -362,6 +417,7 @@
     suspended = on;
     if (on) {
       unlatch();
+      if (clickT >= 0) endClick();
       wrap.classList.remove('is-live');
       wrap.style.display = 'none';
       if (CONFIG.hideDefaultCursor) root.classList.remove('tc-hide-cursor');
@@ -404,14 +460,35 @@
     if (el) latch(el);
   }, { passive: true });
 
+  /* The dot's scale is normally a CSS transition off these two handlers.
+     While the shutter runs the loop writes it every frame instead, so the
+     transition has to stand down (.tc-clicking in styles.css) or it would
+     smear a 275ms animation over its own 300ms ease. */
+
+  function endClick() {
+    clickT = -1;
+    wrap.classList.remove('tc-clicking');
+    dot.style.transform = 'translate(-50%,-50%) scale(' + (pressed ? '.7' : '1') + ')';
+  }
+
   window.addEventListener('mousedown', function () {
+    if (suspended) return;
+    pressed = true;
     wantScale = 0.9;
     dot.style.transform = 'translate(-50%,-50%) scale(.7)';
+
+    // Only where the click means nothing: latched, it is the target's.
+    if (!target) {
+      clickT = 0;
+      wrap.classList.add('tc-clicking');
+      start();
+    }
   }, { passive: true });
 
   window.addEventListener('mouseup', function () {
+    pressed = false;
     wantScale = 1;
-    dot.style.transform = 'translate(-50%,-50%) scale(1)';
+    if (clickT < 0) dot.style.transform = 'translate(-50%,-50%) scale(1)';
   }, { passive: true });
 
   /* ---------- the latch is the hit box ----------

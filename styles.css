@@ -1303,6 +1303,11 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 .tc-corner:nth-of-type(3){ border-left:none;  border-top:none; }
 .tc-corner:nth-of-type(4){ border-right:none; border-top:none; }
 
+/* Click shutter: while it runs (target-cursor.js writes .tc-clicking for
+   ~275ms) the loop drives the dot's scale every frame, so the transition
+   above has to stand down - otherwise a 300ms ease smears the animation. */
+.target-cursor.tc-clicking .tc-dot{ transition:none; }
+
 .target-cursor.is-on .tc-corner{ border-color:var(--tc-color-on, #fff); }
 .target-cursor.is-on .tc-dot{ background:var(--tc-color-on, #fff); }
 

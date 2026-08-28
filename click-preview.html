@@ -1,0 +1,470 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>click animation preview</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--
+  Sandbox for the idle-state click animation - what the bracket does when
+  you click while NOT latched onto a target. Five candidates, switchable
+  with 1-5 or the buttons. The cursor engine here is a trimmed copy of
+  target-cursor.js (same 12px corners, 3px stroke, same rest pose and
+  spin), so anything that reads right here transplants directly.
+
+  The two boxes on the wall are real latch targets: click one and the
+  animation is deliberately suppressed, same as the site.
+-->
+<style>
+  /* the site sets this globally in styles.css - without it the 12px corner
+     boxes render 18px (12 + two 3px borders) and the bracket sits off-centre
+     from the dot. */
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:#e9e6e0; overflow:hidden; }
+  html,html *{ cursor:none !important; }
+
+  body{
+    font:14px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;
+    color:#111;
+    display:flex; align-items:center; justify-content:center;
+    gap:80px;
+  }
+
+  /* something to click that isn't a target */
+  .wall{ text-align:center; user-select:none; }
+  .wall h1{ font:400 64px/1 "Bebas Neue","Helvetica Neue",sans-serif;
+            letter-spacing:.02em; margin:0 0 8px; }
+  .wall p{ opacity:.5; margin:0; }
+
+  .target{
+    width:190px; height:120px;
+    border:1px solid rgba(0,0,0,.22);
+    display:flex; align-items:center; justify-content:center;
+    opacity:.55; transition:opacity .2s ease;
+  }
+  .target.is-cursor{ opacity:1; }
+
+  /* ---------- the cursor, verbatim from styles.css ---------- */
+
+  .target-cursor{
+    position:fixed; top:0; left:0; width:0; height:0;
+    pointer-events:none; z-index:9999;
+    mix-blend-mode:difference;
+    opacity:0; transition:opacity .2s linear;
+    will-change:transform;
+  }
+  .target-cursor.is-live{ opacity:1; }
+
+  .tc-dot{
+    position:absolute; left:0; top:0;
+    width:4px; height:4px; border-radius:50%;
+    background:#fff;
+    transform:translate(-50%,-50%);
+    will-change:transform;
+  }
+  .tc-corner{
+    position:absolute; left:0; top:0;
+    width:12px; height:12px;
+    border:3px solid #fff;
+    will-change:transform;
+  }
+  .tc-corner:nth-of-type(1){ border-right:none; border-bottom:none; }
+  .tc-corner:nth-of-type(2){ border-left:none;  border-bottom:none; }
+  .tc-corner:nth-of-type(3){ border-left:none;  border-top:none; }
+  .tc-corner:nth-of-type(4){ border-right:none; border-top:none; }
+
+  /* the shockwave ring - only #3 uses it */
+  .tc-ring{
+    position:absolute; left:0; top:0;
+    width:14px; height:14px; margin:-7px 0 0 -7px;
+    border:2px solid #fff; border-radius:50%;
+    opacity:0;
+    will-change:transform,opacity;
+  }
+
+  /* ---------- hud ---------- */
+
+  .hud{
+    position:fixed; left:14px; bottom:14px; z-index:2;
+    background:rgba(255,255,255,.78);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    border-radius:8px; padding:12px 14px;
+    font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;
+    max-width:330px;
+  }
+  .hud b{ display:block; margin-bottom:8px; font-weight:600; letter-spacing:.04em; }
+  .hud button{
+    font:inherit; display:block; width:100%; text-align:left;
+    margin-bottom:4px; padding:5px 8px; cursor:none;
+    background:transparent; border:1px solid rgba(0,0,0,.2); border-radius:5px;
+  }
+  .hud button.on{ background:#111; color:#fff; border-color:#111; }
+  .hud .note{ opacity:.55; margin:8px 0 0; }
+  .hud label{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .hud input[type=range]{ flex:1; cursor:none; }
+</style>
+
+<div class="wall">
+  <h1>CLICK ANYWHERE</h1>
+  <p>1-5 to switch &middot; hold space to loop</p>
+</div>
+<div class="target"><span>latch target</span></div>
+<div class="target"><span>latch target</span></div>
+
+<div class="hud">
+  <b>CLICK ANIMATION</b>
+  <div id="picks"></div>
+  <label>speed <input id="speed" type="range" min="0.5" max="2" step="0.05" value="1"><span id="speedv">1.00&times;</span></label>
+  <p class="note" id="desc"></p>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- geometry, matching target-cursor.js ---------- */
+
+  var CORNER = 12;
+  var REST = [
+    [-CORNER * 1.5, -CORNER * 1.5],
+    [ CORNER * 0.5, -CORNER * 1.5],
+    [ CORNER * 0.5,  CORNER * 0.5],
+    [-CORNER * 1.5,  CORNER * 0.5]
+  ];
+  // rest pose in polar, measured from each corner box's own centre
+  var BASE = REST.map(function (p) {
+    var cx = p[0] + CORNER / 2, cy = p[1] + CORNER / 2;
+    return { a: Math.atan2(cy, cx) * 180 / Math.PI, r: Math.hypot(cx, cy) };
+  });
+  var SPIN = 4.2;   // seconds per idle turn
+
+  /* ---------- easing ---------- */
+
+  function clamp01(t){ return t < 0 ? 0 : t > 1 ? 1 : t; }
+  function outCubic(t){ t = 1 - t; return 1 - t*t*t; }
+  function outQuart(t){ t = 1 - t; return 1 - t*t*t*t; }
+  function inOutCubic(t){ return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+  function outBack(t, k){ k = k || 1.9; var c = k + 1; t = t - 1;
+    return 1 + c*t*t*t + k*t*t; }
+  function outElastic(t){
+    if (t === 0 || t === 1) return t;
+    return Math.pow(2, -9*t) * Math.sin((t*10 - .75) * (2*Math.PI/3)) + 1;
+  }
+  // 0 -> 1 -> 0, smooth at both ends: the "there and back" envelope
+  function pulse(t){ return Math.sin(Math.PI * inOutCubic(t)) ; }
+
+  /* ---------- the five candidates ----------
+
+     Each returns a pose for a given progress t (0..1):
+       corners[i] = { a, r, rot, sc, o }   a/rot in deg, r a multiplier
+         a   extra angle around the cursor centre
+         r   radius multiplier off the rest pose
+         rot extra rotation of the bracket about its own centre
+       spin   degrees added to the wrapper (its own idle spin is paused
+              for the duration, so this owns the rotation outright)
+       dot    dot scale
+       ring   { s, o } for the shockwave, or null
+  ---------------------------------------------------------------- */
+
+  function four(fn){ return [0,1,2,3].map(fn); }
+
+  var ANIMS = [
+  {
+    name: '1  reverse converge',
+    dur: 0.62,
+    desc: 'Spin flips direction, the brackets turn to face the other way and ' +
+          'collapse onto the dot, then ease back out and pick the spin up again.',
+    pose: function (t) {
+      var p = pulse(t);                      // 0 -> 1 -> 0
+      var turn = inOutCubic(t);              // one continuous -360 turn
+      return {
+        corners: four(function () {
+          return { a: 0, r: 1 - 0.86 * p, rot: -360 * turn, sc: 1 - 0.15 * p };
+        }),
+        spin: -150 * turn,
+        dot: 1 + 0.9 * p
+      };
+    }
+  },
+  {
+    name: '2  pinwheel snap',
+    dur: 0.5,
+    desc: 'A hard quarter-turn: every bracket swings 90 degrees around the dot ' +
+          'and overshoots into place. Four-fold symmetry means it lands home.',
+    pose: function (t) {
+      var e = outBack(t, 2.2);
+      var dip = Math.sin(Math.PI * t);
+      return {
+        corners: four(function () {
+          return { a: 90 * e, r: 1 - 0.28 * dip, rot: 90 * e, sc: 1 };
+        }),
+        spin: 0,
+        dot: 1 + 0.5 * dip
+      };
+    }
+  },
+  {
+    name: '3  burst + ring',
+    dur: 0.72,
+    desc: 'Impact: the brackets are thrown outward and fade while a ring leaves ' +
+          'the dot, then they snap back on an elastic return.',
+    pose: function (t) {
+      var out = outCubic(clamp01(t / 0.28));           // the throw
+      var back = t < 0.28 ? 0 : outElastic((t - 0.28) / 0.72);
+      var r = 1 + (2.3 - 1) * out * (1 - back);
+      var o = 1 - 0.55 * out * (1 - back);
+      var rt = clamp01(t / 0.85);
+      return {
+        corners: four(function () {
+          return { a: 0, r: r, rot: 0, sc: 1 - 0.25 * out * (1 - back), o: o };
+        }),
+        spin: 0,
+        dot: 1 + 1.4 * out * (1 - back),
+        ring: { s: 0.4 + 4.2 * outQuart(rt), o: 0.9 * (1 - rt) * (1 - rt) }
+      };
+    }
+  },
+  {
+    name: '4  shutter blink',
+    dur: 0.55,
+    desc: 'The four brackets shut into one solid box over the dot, hold for a ' +
+          'beat, then open back out with a small overshoot. Camera-ish.',
+    pose: function (t) {
+      var close = 0.34, hold = 0.46;         // fractions of the duration
+      var v;                                  // 0 = open, 1 = shut
+      if (t < close) v = outCubic(t / close);
+      else if (t < hold) v = 1;
+      else v = 1 - outBack((t - hold) / (1 - hold), 1.4);
+      return {
+        corners: four(function () {
+          return { a: 0, r: 1 - v, rot: 0, sc: 1 };
+        }),
+        spin: 0,
+        dot: 1 - 0.85 * v                    // the dot is swallowed by the box
+      };
+    }
+  },
+  {
+    name: '5  whip tumble',
+    dur: 0.68,
+    desc: 'One fast full turn with the brackets trailing - each corner is a ' +
+          'few frames behind the last, so the bracket smears and settles.',
+    pose: function (t) {
+      var lead = outQuart(t);
+      return {
+        corners: four(function (i) {
+          var lag = clamp01((t - i * 0.055) / (1 - 3 * 0.055));
+          var e = outQuart(lag);
+          var squash = Math.sin(Math.PI * lag);
+          return {
+            a: 360 * e - 360 * lead,          // relative to the wrapper's turn
+            r: 1 + 0.55 * squash,
+            rot: 0,
+            sc: 1 - 0.1 * squash
+          };
+        }),
+        spin: 360 * lead,
+        dot: 1 + 0.6 * Math.sin(Math.PI * t)
+      };
+    }
+  }];
+
+  var pick = 0;
+  var rate = 1;
+
+  /* ---------- dom ---------- */
+
+  var wrap = document.createElement('div');
+  wrap.className = 'target-cursor';
+  wrap.innerHTML = '<span class="tc-dot"></span><span class="tc-ring"></span>' +
+    '<i class="tc-corner"></i><i class="tc-corner"></i>' +
+    '<i class="tc-corner"></i><i class="tc-corner"></i>';
+  document.body.appendChild(wrap);
+
+  var dot = wrap.querySelector('.tc-dot');
+  var ring = wrap.querySelector('.tc-ring');
+  var corners = wrap.querySelectorAll('.tc-corner');
+
+  /* ---------- state ---------- */
+
+  var mx = innerWidth / 2, my = innerHeight / 2, px = mx, py = my;
+  var rot = 0, scale = 1, wantScale = 1;
+  var cur = [], from = [];
+  for (var i = 0; i < 4; i++) { cur.push(REST[i].slice()); from.push(REST[i].slice()); }
+
+  var target = null, grip = 0, release = -1;
+  var clickT = -1;                     // seconds into the click animation
+  var looping = false;
+  var last = 0;
+
+  function lerpK(per60, dt){ return 1 - Math.pow(1 - per60, dt * 60); }
+  function outQuad(t){ return 1 - (1 - t) * (1 - t); }
+
+  /* ---------- latch (proximity, same idea as the site) ---------- */
+
+  function edgeDist(r, x, y){
+    var dx = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0);
+    var dy = y < r.top ? r.top - y : (y > r.bottom ? y - r.bottom : 0);
+    return Math.hypot(dx, dy);
+  }
+
+  function scan(){
+    var els = document.querySelectorAll('.target');
+    var best = null, bestD = Infinity;
+    for (var i = 0; i < els.length; i++) {
+      var d = edgeDist(els[i].getBoundingClientRect(), mx, my);
+      if (els[i] === target) d -= 25;
+      if (d < bestD) { bestD = d; best = els[i]; }
+    }
+    if (best && bestD <= 60) {
+      if (target !== best) {
+        if (target) target.classList.remove('is-cursor');
+        target = best; grip = 0; release = -1; rot = 0;
+        target.classList.add('is-cursor');
+      }
+    } else if (target) {
+      target.classList.remove('is-cursor');
+      target = null; grip = 0; release = 0;
+      for (var j = 0; j < 4; j++) { from[j] = cur[j].slice(); }
+    }
+  }
+
+  /* ---------- loop ---------- */
+
+  var checkAt = 0;
+
+  function frame(now){
+    var dt = last ? Math.min((now - last) / 1000, 0.05) : 1/60;
+    last = now;
+
+    checkAt -= dt;
+    if (checkAt <= 0) { checkAt = 0.06; scan(); }
+
+    px += (mx - px) * lerpK(0.35, dt);
+    py += (my - py) * lerpK(0.35, dt);
+    scale += (wantScale - scale) * lerpK(0.25, dt);
+
+    var anim = ANIMS[pick];
+    var playing = clickT >= 0 && !target;
+    var pose = null;
+
+    if (playing) {
+      clickT += dt * rate;
+      var t = clickT / anim.dur;
+      if (t >= 1) {
+        t = 1;
+        if (looping) clickT = 0; else clickT = -1;
+      }
+      pose = anim.pose(clamp01(t));
+    } else if (clickT >= 0 && target) {
+      clickT = -1;                      // latched: the click belongs to the target
+    }
+
+    if (!target) rot = (rot + 360 * dt / SPIN) % 360;
+
+    if (target) {
+      // corners chase the box, as on the site
+      var r = target.getBoundingClientRect();
+      var l = r.left - 3, tp = r.top - 3;
+      var rr = r.right + 3 - CORNER, b = r.bottom + 3 - CORNER;
+      var box = [[l,tp],[rr,tp],[rr,b],[l,b]];
+      grip = Math.min(1, grip + dt / 0.65);
+      var g = outQuad(grip), snap = lerpK(0.5, dt), pull = lerpK(0.22, dt);
+      for (var i2 = 0; i2 < 4; i2++) {
+        var f = g >= 0.999 ? pull : g * snap;
+        cur[i2][0] += (box[i2][0] - px - cur[i2][0]) * f;
+        cur[i2][1] += (box[i2][1] - py - cur[i2][1]) * f;
+      }
+    } else if (pose) {
+      for (var i3 = 0; i3 < 4; i3++) {
+        var c = pose.corners[i3];
+        var ang = (BASE[i3].a + (c.a || 0)) * Math.PI / 180;
+        var rad = BASE[i3].r * (c.r == null ? 1 : c.r);
+        cur[i3][0] = Math.cos(ang) * rad - CORNER / 2;
+        cur[i3][1] = Math.sin(ang) * rad - CORNER / 2;
+      }
+      release = -1;
+    } else if (release >= 0) {
+      release += dt;
+      var p = Math.min(1, release / 0.3), e = 1 - Math.pow(1 - p, 4);
+      for (var i4 = 0; i4 < 4; i4++) {
+        cur[i4][0] = from[i4][0] + (REST[i4][0] - from[i4][0]) * e;
+        cur[i4][1] = from[i4][1] + (REST[i4][1] - from[i4][1]) * e;
+      }
+      if (p === 1) release = -1;
+    } else {
+      for (var i5 = 0; i5 < 4; i5++) { cur[i5][0] = REST[i5][0]; cur[i5][1] = REST[i5][1]; }
+    }
+
+    var spin = rot + (pose ? pose.spin : 0);
+    wrap.style.transform = 'translate3d(' + px.toFixed(2) + 'px,' + py.toFixed(2) +
+      'px,0) rotate(' + spin.toFixed(2) + 'deg) scale(' + scale.toFixed(3) + ')';
+
+    for (var n = 0; n < 4; n++) {
+      var c2 = pose ? pose.corners[n] : null;
+      corners[n].style.transform =
+        'translate3d(' + cur[n][0].toFixed(2) + 'px,' + cur[n][1].toFixed(2) + 'px,0)' +
+        (c2 ? ' rotate(' + (c2.rot || 0).toFixed(2) + 'deg) scale(' + (c2.sc == null ? 1 : c2.sc).toFixed(3) + ')' : '');
+      corners[n].style.opacity = c2 && c2.o != null ? c2.o.toFixed(3) : '1';
+    }
+
+    dot.style.transform = 'translate(-50%,-50%) scale(' +
+      (pose ? pose.dot : 1).toFixed(3) + ')';
+
+    if (pose && pose.ring) {
+      ring.style.opacity = pose.ring.o.toFixed(3);
+      ring.style.transform = 'scale(' + pose.ring.s.toFixed(3) + ')';
+    } else {
+      ring.style.opacity = '0';
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- input ---------- */
+
+  addEventListener('mousemove', function (e){
+    mx = e.clientX; my = e.clientY;
+    wrap.classList.add('is-live');
+  }, { passive:true });
+
+  addEventListener('mousedown', function (){
+    wantScale = 0.9;
+    if (!target) clickT = 0;            // the whole point: idle click only
+  }, { passive:true });
+  addEventListener('mouseup', function (){ wantScale = 1; }, { passive:true });
+
+  addEventListener('keydown', function (e){
+    if (e.key >= '1' && e.key <= '5') choose(+e.key - 1);
+    if (e.code === 'Space' && !looping) { looping = true; clickT = 0; e.preventDefault(); }
+  });
+  addEventListener('keyup', function (e){
+    if (e.code === 'Space') looping = false;
+  });
+
+  /* ---------- hud ---------- */
+
+  var picks = document.getElementById('picks');
+  var desc  = document.getElementById('desc');
+  var btns = ANIMS.map(function (a, i) {
+    var b = document.createElement('button');
+    b.textContent = a.name;
+    b.onclick = function (ev) { ev.stopPropagation(); choose(i); };
+    picks.appendChild(b);
+    return b;
+  });
+
+  function choose(i){
+    pick = i;
+    btns.forEach(function (b, j) { b.classList.toggle('on', j === i); });
+    desc.textContent = ANIMS[i].desc;
+    clickT = 0;                          // preview it immediately
+  }
+
+  var sp = document.getElementById('speed'), spv = document.getElementById('speedv');
+  sp.oninput = function () {
+    rate = +sp.value;
+    spv.textContent = rate.toFixed(2) + '×';
+  };
+
+  choose(0);
+})();
+</script>
