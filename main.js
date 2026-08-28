@@ -74,12 +74,20 @@
      so nothing moves on screen until current passes tzRange, at which point
      the visual offset picks up from exactly 0 with no jump. */
 
-  var TZ_MAX_DEFAULT = 6.5;         // dev-knob default, range [4.8, 9]
+  var TZ_MAX_DEFAULT = 7.5;         // dev-knob default, range [4.8, 9]
   var TZ_ARM_SCALE = 2.0;           // scale at which the cursor lets go
-  var TZ_HOLD = 0.08;               // fraction of the runway held untouched
+  var TZ_HOLD = 0.06;               // fraction of the runway held untouched
                                      // before the zoom starts at all
-  var TZ_BLUR_MAX = 14;             // px, at full zoom
-  var TZ_BLUR_STEP = 1;             // px - blur is a real per-pixel
+  var TZ_BLUR_MAX = 26;             // px of blur ON SCREEN at full
+                                     // separation. The letters sit inside
+                                     // the parent's scale, so a radius
+                                     // written here is magnified by it -
+                                     // at 5x a flat 16px was landing as
+                                     // ~80px and the name turned to soup
+                                     // halfway through. paintTunnel divides
+                                     // by the live scale to keep what you
+                                     // actually see at this figure.
+  var TZ_BLUR_STEP = 0.5;           // px - blur is a real per-pixel
                                      // convolution, not a cheap compositor
                                      // op like transform/opacity, so its
                                      // written value is quantized to whole
@@ -88,29 +96,56 @@
                                      // every frame - a static filter value
                                      // is what lets the browser skip
                                      // redoing the blur on a given frame
-  var TZ_RANGE_FACTOR = 0.2;        // fraction of viewport height (~20vh) -
-                                     // short on purpose, so a normal scroll
-                                     // gesture slides straight through it
+  var TZ_RANGE_FACTOR = 0.9;        // fraction of viewport height. This is
+                                     // the whole difference between an
+                                     // effect you see and one a single
+                                     // flick of the wheel skips past: at
+                                     // ~0.2 the word was through the entire
+                                     // zoom inside one scroll gesture. Just
+                                     // under a viewport gives the tunnel a
+                                     // deliberate, held length without the
+                                     // page ever feeling stuck.
+
+  /* Per-letter separation. The glyphs do not just ride the parent scale -
+     each one also drifts outward from the word's centre, tips slightly with
+     the direction it is leaving in, and blurs and fades on its own clock,
+     outermost first. That staggered exit is what makes it read as the word
+     coming apart around you rather than a picture of a word being enlarged. */
+  var TZ_SPREAD = 0.42;             // em of extra outward drift at full
+                                     // separation (rides the parent scale)
+  var TZ_RISE = 0.09;               // em of vertical drift, alternating
+  var TZ_TILT = 7;                  // deg of tip at full separation
+  var TZ_LAG = 0.34;                // how much later the centre letters go
+                                     // than the outermost ones
+  var TZ_FADE_AT = 0.74;            // per-letter progress where it starts
+                                     // giving up its opacity - late, so the
+                                     // letters are still solid while they
+                                     // separate and only dissolve on the
+                                     // way out of frame
+  var TZ_SPAN = 1 - TZ_LAG;         // length of one letter's own window
 
   // Nothing happens for the first TZ_HOLD of the runway - the name stays put
   // and sharp before the effect kicks in, instead of starting to blur the
   // instant scrolling begins.
+  //
+  // The curve past that point eases IN, not out. An ease-out spent nine
+  // tenths of the effect in the first third of the runway: the name was
+  // blurred away and gone by half a scroll, and the rest of the tunnel was
+  // dead travel. Accelerating instead is also what the effect is pretending
+  // to be - something being pushed towards you gains speed - so the name
+  // stays large and readable while it opens up, and only tears away at the
+  // very end.
   function tzEase(t) {
     if (t <= TZ_HOLD) return 0;
     var u = (t - TZ_HOLD) / (1 - TZ_HOLD);
-    return 1 - Math.pow(1 - u, 2.2);
-  }
-
-  // Stays fully opaque through almost the entire zoom - "opaque while it's
-  // bigger" - and only drops in the last stretch, right as it explodes.
-  function tzOpacityCurve(e) {
-    return e < 0.85 ? 1 : clamp(1 - (e - 0.85) / 0.15, 0, 1);
+    return Math.pow(u, 1.6);
   }
 
   var tzMax = TZ_MAX_DEFAULT;       // dev-knob value
   var tzRange = 0;                  // px, recomputed in measure()
-  var tzScale = 1, tzBlur = 0, tzOpacity = 1;   // lerped, painted values
-  var tzBlurWritten = -1;           // last quantized --tz-blur px value
+  var tzScale = 1;                  // lerped, painted parent scale
+  var tzE = 0;                      // lerped separation progress, 0..1
+  var tzLetters = [];               // { el, dir, alt, lag, blurWritten }
   var tzArmed = false;
   var tzActive = false;             // true anywhere inside the runway - lets
                                      // the wordmark render above the nav
@@ -157,10 +192,42 @@
     var travel = bgh - vh;
     bgRate = max > 0 ? Math.min(BG_RATE, travel / max) : 0;
 
+    measureLetters();
+
     target = current = clamp(window.scrollY / zoom, 0, realMax);
     var vy = clamp(current - tzRange, 0, max);
     render(vy);
     reveal(vy);
+    paintTunnel();
+  }
+
+  /* Where each glyph sits across the word, as -1 (left edge) .. +1 (right
+     edge) off its own centre. Re-read on every measure because the dev-mode
+     face switch and the font swap both change every letter's width. */
+  function measureLetters() {
+    var nodes = document.querySelectorAll('.wordmark .wm-l');
+    if (!nodes.length) { tzLetters = []; return; }
+
+    var first = nodes[0], lastN = nodes[nodes.length - 1];
+    var left = first.offsetLeft;
+    var right = lastN.offsetLeft + lastN.offsetWidth;
+    var mid = (left + right) / 2;
+    var half = Math.max(1, (right - left) / 2);
+
+    tzLetters = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var dir = ((el.offsetLeft + el.offsetWidth / 2) - mid) / half;
+      tzLetters.push({
+        el: el,
+        dir: dir,
+        alt: (i % 2 ? 1 : -1) * (0.6 + 0.4 * Math.abs(dir)),
+        // Outermost letters leave first: they are the ones a real camera
+        // push would carry past the frame edge soonest.
+        lag: TZ_LAG * (1 - Math.abs(dir)),
+        blurWritten: -1
+      });
+    }
   }
 
   /* ---------- paint ---------- */
@@ -177,6 +244,43 @@
       if (!it.shown && it.top < line) {
         it.shown = true;
         it.el.classList.add('in');
+      }
+    }
+  }
+
+  /* One write of the parent scale, then each glyph's own pose. Seven
+     elements a frame is nothing next to the blur, and doing the stagger
+     here rather than in CSS keeps the easing curves in one place. */
+  function paintTunnel() {
+    root.style.setProperty('--tz-scale', tzScale.toFixed(3));
+
+    for (var i = 0; i < tzLetters.length; i++) {
+      var L = tzLetters[i];
+
+      // Its own slice of the runway: every letter gets the same length of
+      // window, just started at a different moment, so the outer ones are
+      // genuinely gone while the centre is still on its way out - a shared
+      // finish line would have staggered only the shape, not the exit.
+      // Squared so a letter eases out of the word instead of jumping the
+      // moment its clock starts.
+      var p = clamp((tzE - L.lag) / TZ_SPAN, 0, 1);
+      var q = p * p;
+
+      var st = L.el.style;
+      st.setProperty('--l-x', (L.dir * TZ_SPREAD * q).toFixed(4) + 'em');
+      st.setProperty('--l-y', (L.alt * TZ_RISE * q).toFixed(4) + 'em');
+      st.setProperty('--l-rot', (L.dir * TZ_TILT * q).toFixed(2) + 'deg');
+      st.setProperty('--l-o',
+        (p < TZ_FADE_AT ? 1 : clamp(1 - (p - TZ_FADE_AT) / (1 - TZ_FADE_AT), 0, 1)).toFixed(3));
+
+      // Quantized on purpose - see TZ_BLUR_STEP above. Only actually
+      // touches the DOM (and triggers a re-blur) when the rounded value
+      // changes, which on most frames it does not.
+      var blurWant = TZ_BLUR_MAX * p / Math.max(1, tzScale);
+      var blurQ = Math.round(blurWant / TZ_BLUR_STEP) * TZ_BLUR_STEP;
+      if (blurQ !== L.blurWritten) {
+        L.blurWritten = blurQ;
+        st.setProperty('--l-blur', blurQ.toFixed(1) + 'px');
       }
     }
   }
@@ -199,30 +303,16 @@
 
     // Tunnel progress off the same lerped scroll value already computed
     // above - free, no extra scroll read.
-    var tzT = clamp(current / tzRange, 0, 1);
-    var tzE = tzEase(tzT);
-
-    var tzWantScale = 1 + (tzMax - 1) * tzE;
-    var tzWantBlur = TZ_BLUR_MAX * tzE;
-    var tzWantOpacity = tzOpacityCurve(tzE);
+    var tzWantE = tzEase(clamp(current / tzRange, 0, 1));
+    var tzWantScale = 1 + (tzMax - 1) * tzWantE;
 
     // Chase the target values the same way target-cursor.js chases the
     // pointer - frame-rate independent, so a fast/jerky scroll still glides.
     var tzK = 1 - Math.pow(1 - 0.32, dt / 16.667);
     tzScale += (tzWantScale - tzScale) * tzK;
-    tzBlur += (tzWantBlur - tzBlur) * tzK;
-    tzOpacity += (tzWantOpacity - tzOpacity) * tzK;
+    tzE += (tzWantE - tzE) * tzK;
 
-    root.style.setProperty('--tz-scale', tzScale.toFixed(3));
-    root.style.setProperty('--tz-opacity', tzOpacity.toFixed(3));
-
-    // Quantized on purpose - see TZ_BLUR_STEP above. Only actually touches
-    // the DOM (and triggers a re-blur) when the rounded value changes.
-    var blurQ = Math.round(tzBlur / TZ_BLUR_STEP) * TZ_BLUR_STEP;
-    if (blurQ !== tzBlurWritten) {
-      tzBlurWritten = blurQ;
-      root.style.setProperty('--tz-blur', blurQ.toFixed(0) + 'px');
-    }
+    paintTunnel();
 
     var shouldArm = tzScale >= TZ_ARM_SCALE;
     if (shouldArm !== tzArmed) {

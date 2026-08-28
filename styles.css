@@ -1023,26 +1023,51 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
 
    The scale lives here, on the box the cursor bracket measures - transform
    is compositor-only and stays cheap no matter how large it grows. Blur is
-   the opposite: it is a real per-pixel convolution, so it is pushed onto
-   the .wm-fx child instead of stacking on the same layer as an animating
-   transform (a filter+transform layer forces the browser to re-rasterize
-   the blur at the combined scale on every frame, not just when the blur
-   radius itself changes - see developer.chrome.com/blog/animated-blur).
-   main.js also quantizes --tz-blur to whole pixels so most frames don't
-   change it at all, since a static filter value is what actually lets the
-   browser skip redoing the convolution. */
+   the opposite: it is a real per-pixel convolution, so it is pushed down
+   onto the individual .wm-l letters rather than stacking on the same layer
+   as this animating transform (a filter+transform layer forces the browser
+   to re-rasterize the blur at the combined scale on every frame, not just
+   when the blur radius itself changes - see
+   developer.chrome.com/blog/animated-blur). main.js also quantizes each
+   letter's blur to whole pixels so most frames don't change it at all,
+   since a static filter value is what actually lets the browser skip
+   redoing the convolution. */
 .wordmark[data-r].in{
   transform-origin:center center;
   transform:scale(var(--tz-scale, 1));
   transition:none;
   will-change:transform;
+
+  /* The lede is a later sibling and carries its own transform, so without
+     this it wins the paint order and the small subtitle sits on top of a
+     letter twenty times its size - which reads as a mistake rather than as
+     something passing the camera. */
+  position:relative;
+  z-index:2;
 }
 .wordmark[data-r].in .wm-fx{
   display:inline-block;
-  filter:blur(var(--tz-blur, 0px));
-  opacity:var(--tz-opacity, 1);
+}
+
+/* Every glyph is its own layer so the word can come apart instead of
+   sliding up as one slab: main.js writes --l-x / --l-y / --l-rot / --l-blur /
+   --l-o per letter, on its own staggered clock (outer letters leave first,
+   the way they would if you really were flying through the word). The
+   translate is in em on purpose - it rides the parent's scale, so the
+   separation accelerates with the zoom rather than reading as a flat slide.
+
+   transition:none for the same reason as the parent above: these are
+   rewritten every frame and main.js owns the smoothing. */
+.wm-l{
+  display:inline-block;
+  transform:translate3d(var(--l-x, 0em), var(--l-y, 0em), 0)
+            rotate(var(--l-rot, 0deg));
+  filter:blur(var(--l-blur, 0px));
+  opacity:var(--l-o, 1);
   transition:none;
-  will-change:filter, opacity;
+}
+.wordmark[data-r].in .wm-l{
+  will-change:transform, filter, opacity;
 }
 
 /* Hero cascades in on load */
@@ -1328,4 +1353,5 @@ body.tc-focus .outro > *:not(.is-cursor){
   .shots img{ transition:none !important; }
 
   .wordmark{ transform:none !important; filter:none !important; opacity:1 !important; }
+  .wm-l{ transform:none !important; filter:none !important; opacity:1 !important; }
 }

@@ -414,6 +414,44 @@
     dot.style.transform = 'translate(-50%,-50%) scale(1)';
   }, { passive: true });
 
+  /* ---------- the latch is the hit box ----------
+
+     The bracket reaches for a target before the pointer is on it, and it
+     lags behind the pointer once it is inside - so the framed thing, not
+     the pixel under the dot, is what a click means. While something is
+     latched, a click that lands off it is forwarded to it. A click that
+     hits a real control - a gallery zone, some other link or button -
+     still belongs to that control and is left alone. */
+
+  var CLICK_SKIP = 'a, button, input, select, textarea, label, .shot-zone';
+  var forwarding = false;
+
+  // Where the click has to land for the page to act on it: a project only
+  // opens from its title (main.js swallows the rest of the card), and every
+  // other target is its own hit box.
+  function hitFor(el) {
+    if (!el.classList.contains('project')) return el;
+    return el.querySelector('.meta h2') || el;
+  }
+
+  window.addEventListener('click', function (e) {
+    if (suspended || forwarding || !target || !e.isTrusted) return;
+
+    var t = e.target, hit = hitFor(target);
+    if (!hit || !t || !t.closest) return;
+    if (hit === t || hit.contains(t)) return;        // already on the mark
+
+    var ctl = t.closest(CLICK_SKIP);
+    if (ctl && (!(ctl === target || target.contains(ctl)) ||
+                ctl.classList.contains('shot-zone'))) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    forwarding = true;
+    try { hit.click(); } finally { forwarding = false; }
+  }, true);
+
   // Pointer off the window entirely: drop any latch and fade the bracket out.
   document.addEventListener('mouseleave', function () {
     unlatch();
