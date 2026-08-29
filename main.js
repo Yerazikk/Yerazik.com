@@ -57,6 +57,7 @@
   var zoom = 1;            // stage scale; 1 in production, <1 only in dev
   var target = 0, current = 0, max = 0, realMax = 0, vh = 0, bgRate = 0;
   var items = [], running = false, last = 0;
+  var landing = 0;         // where a one-gesture tunnel launch comes to rest
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
@@ -169,6 +170,12 @@
     for (var i = 0; i < nodes.length; i++) {
       items.push({ el: nodes[i], top: nodes[i].offsetTop, shown: nodes[i].classList.contains('in') });
     }
+    // Where the tunnel launch sets down: the top of the work section, i.e.
+    // one hero out of the way. Read here, inside the un-transformed block,
+    // with the rest of the layout.
+    var work = content.querySelector('.work');
+    landing = work ? work.offsetTop : vh;
+
     content.style.transform = prev;
 
     max = Math.max(0, h - vh);
@@ -352,6 +359,60 @@
   /* ---------- wiring ---------- */
 
   window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* ---------- one-gesture tunnel launch ----------
+
+     The runway is nearly a viewport tall on purpose (TZ_RANGE_FACTOR), which
+     reads well but costs the visitor five or six wheel ticks to get through -
+     the zoom stutters along one notch at a time and the page feels stuck.
+     So while we are inside the runway we take the gesture over: the first
+     downward input, however small, jumps the real scroll position to the far
+     end of the tunnel and the existing lerp plays the whole zoom out from
+     wherever it was. One flick expands the wordmark and hands off to the
+     page, which is what a single scroll is asking for.
+
+     Only downward input inside the runway is swallowed; scrolling back up
+     into it, and everything past it, stays completely native. */
+
+  function tunnelLaunch() {
+    if (target >= tzRange - 1) return false;
+    // Past the end of the runway, not just up to it: stopping at tzRange
+    // finishes the zoom but leaves the page sitting on the hero, so the
+    // gesture reads as "the word exploded and nothing scrolled". Carrying on
+    // to the work section is the handoff the scroll was asking for.
+    var to = clamp(tzRange + landing, 0, realMax);
+    window.scrollTo(0, Math.round(to * zoom));
+    target = to;                       // don't wait on the scroll event
+    start();
+    return true;
+  }
+
+  // Non-passive so the native scroll this gesture would have done can be
+  // dropped - otherwise it lands on top of ours and overshoots past the
+  // handoff. Cheapest possible early-out when we are not in the runway.
+  window.addEventListener('wheel', function (e) {
+    if (target >= tzRange - 1 || e.deltaY <= 0) return;
+    if (tunnelLaunch()) e.preventDefault();
+  }, { passive: false });
+
+  var touchY = 0;
+  window.addEventListener('touchstart', function (e) {
+    touchY = e.touches[0].clientY;
+  }, { passive: true });
+
+  window.addEventListener('touchmove', function (e) {
+    if (target >= tzRange - 1) return;
+    if (touchY - e.touches[0].clientY < 6) return;   // upward swipe = scroll down
+    if (tunnelLaunch()) e.preventDefault();
+  }, { passive: false });
+
+  var DOWN_KEYS = { 'ArrowDown': 1, 'PageDown': 1, ' ': 1, 'Spacebar': 1, 'End': 1 };
+  window.addEventListener('keydown', function (e) {
+    if (target >= tzRange - 1 || !DOWN_KEYS[e.key]) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (tunnelLaunch()) e.preventDefault();
+  });
 
   var rt;
   window.addEventListener('resize', function () {
