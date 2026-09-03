@@ -643,25 +643,25 @@ body{
 
 .nav{
   position:absolute;
-  top:0; left:0; right:0;
+  top:0; right:0;
   z-index:5;
   display:flex;
   justify-content:flex-end;
-  gap:clamp(1.5rem,3vw,2.75rem);
-  padding:clamp(1.5rem,3.5vh,2.25rem) var(--pad) 0;
+  gap:clamp(.75rem,1.5vw,1.5rem);
+  padding:clamp(1rem,2.5vh,1.5rem) clamp(2rem,5vw,3.5rem) 0;
 }
 .nav a{
   font:inherit;
   color:var(--ink);
   text-decoration:none;
-  font-size:1rem;
-  letter-spacing:.2em;
+  font-size:.82rem;
+  letter-spacing:.13em;
   text-transform:uppercase;
-  opacity:.78;
-  padding-block:.5em;
-  padding-inline:.5em;
-  margin-block:-.5em;
-  margin-inline:-.5em;
+  opacity:.6;
+  padding-block:.4em;
+  padding-inline:.4em;
+  margin-block:-.4em;
+  margin-inline:-.4em;
   transition:opacity .3s var(--ease), filter .2s ease, color .28s linear;
 }
 @media (hover:hover){
@@ -684,7 +684,7 @@ body{
   position:relative;
   display:grid;
   place-items:center;
-  width:2.25rem; height:2.25rem;
+  width:1.6rem; height:1.6rem;
   margin-block:-.5em;
   margin-inline:-.4rem -.55rem;
   border:0;
@@ -702,7 +702,7 @@ body{
 
 .theme-switch svg{
   grid-area:1 / 1;
-  width:1.15rem; height:1.15rem;
+  width:.85rem; height:.85rem;
   fill:none;
   stroke:currentColor;
   stroke-width:1.5;
