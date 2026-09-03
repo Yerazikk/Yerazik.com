@@ -33,6 +33,9 @@
   ========================================================== -->
   <div class="bg" id="bg" aria-hidden="true">
 
+    <!-- Photo crossfade layer: holds the outgoing image during dissolve transitions -->
+    <div class="bg-photo-over" aria-hidden="true"></div>
+
     <!-- Window light: four panes of sun. The gaps between them are
          the frame shadows. Static; blurred once as a group. -->
     <div class="win">
@@ -633,8 +636,10 @@
   </div>
 </div>
 
+
 <script src="main.js" defer></script>
 <script src="breeze.js" defer></script>
 <script src="target-cursor.js" defer></script>
+<script src="theme-fx.js" defer></script>
 </body>
 </html>

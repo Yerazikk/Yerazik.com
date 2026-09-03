@@ -716,14 +716,16 @@ body{
 [data-theme="dark"] .theme-switch .i-sun { opacity:1; transform:none; }
 [data-theme="dark"] .theme-switch .i-moon{ opacity:0; transform:rotate(70deg) scale(.6); }
 
-/* The palette cuts, the type cross-fades. A light switch is instant and
-   the wall photo cannot tween anyway, but snapping the type from black
-   to paper in one frame reads as a glitch rather than a switch. */
+/* Dissolve: every colour token cross-fades together.
+   The photo crossfade is handled separately in theme-fx.js. */
 body,
 .frame, .frame::after, .frame-in,
-.stack li{
-  transition:color .28s linear, background-color .28s linear,
-             border-color .28s linear;
+.stack li,
+.nav, .nav a,
+.theme-switch,
+.bg, .grain, .veil{
+  transition:color 850ms ease, background-color 850ms ease,
+             border-color 850ms ease;
 }
 
 /* ---------- hero ---------- */
@@ -1370,4 +1372,17 @@ body.tc-focus .outro > *:not(.is-cursor){
 
   .wordmark{ transform:none !important; filter:none !important; opacity:1 !important; }
   .wm-l{ transform:none !important; filter:none !important; opacity:1 !important; }
+}
+
+/* --- photo crossfade overlay (dissolve) --- */
+.bg-photo-over{
+  position:absolute;
+  inset:0;
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  transform:scale(var(--bg-zoom, 1));
+  transform-origin:50% 50%;
+  opacity:0;
+  pointer-events:none;
 }
