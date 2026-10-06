@@ -368,11 +368,30 @@
     <div class="inner">
 
       <section class="hero">
-        <!-- Split per letter: the scroll tunnel flies each glyph apart on its own
-           timing (main.js). aria-label keeps it one word for a screen reader
-           instead of seven letters spelled out. -->
-        <h1 class="wordmark cursor-target" data-r aria-label="Yerazik"><span class="wm-fx" aria-hidden="true"><span class="wm-l">Y</span><span class="wm-l">e</span><span class="wm-l">r</span><span class="wm-l">a</span><span class="wm-l">z</span><span class="wm-l">i</span><span class="wm-l">k</span></span></h1>
-        <p class="lede" data-r>beep boop beep boop</p>
+        <p class="greeting" data-r><span class="tick" aria-hidden="true"></span>Hi, I’m</p>
+
+        <!-- Two lines, one sentence. Each line is its own .wm-fx block so the
+             cream wipe reveals them in sequence rather than as one slab. The
+             name keeps the .wordmark class: it carries the display face and is
+             where the cursor bracket parks on load (target-cursor.js). -->
+        <h1 class="intro" data-r>
+          <span class="intro-line">
+            <span class="wordmark cursor-target"><span class="wm-fx">Yerazik Boghozian<span class="comma">,</span></span></span>
+          </span>
+          <span class="intro-line intro-role">
+            <span class="wm-fx">software engineer</span>
+          </span>
+        </h1>
+
+        <p class="lede" data-r>
+          <span class="lede-rule" aria-hidden="true"></span>
+          <span class="lede-text">Find my projects below</span>
+          <span class="lede-arrow" aria-hidden="true">
+            <svg viewBox="0 0 12 22" aria-hidden="true">
+              <path d="M6 1v18M1 14l5 6 5-6"/>
+            </svg>
+          </span>
+        </p>
       </section>
 
       <section class="work">
@@ -641,5 +660,6 @@
 <script src="breeze.js" defer></script>
 <script src="target-cursor.js" defer></script>
 <script src="theme-fx.js" defer></script>
+
 </body>
 </html>

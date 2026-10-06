@@ -55,110 +55,15 @@
   /* ---------- state ---------- */
 
   var zoom = 1;            // stage scale; 1 in production, <1 only in dev
-  var target = 0, current = 0, max = 0, realMax = 0, vh = 0, bgRate = 0;
+  var target = 0, current = 0, max = 0, vh = 0, bgRate = 0;
   var items = [], running = false, last = 0;
-  var landing = 0;         // where a one-gesture tunnel launch comes to rest
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
-
-  /* ---------- wordmark zoom tunnel ----------
-
-     A scroll-locked intro: the page holds completely still - content, bg,
-     everything - while the wordmark punches into a hyperscale close-up. Only
-     once it has fully zoomed/blurred/faded away ("exploded") does scrolling
-     start actually moving the page, continuing on seamlessly from there.
-
-     This is implemented by giving the real scrollable height an extra
-     tzRange of "dead" scroll distance up front: real scroll position
-     (`current`) drives the tunnel's progress directly, and the visual
-     offset handed to render()/reveal() is current - tzRange, clamped to 0 -
-     so nothing moves on screen until current passes tzRange, at which point
-     the visual offset picks up from exactly 0 with no jump. */
-
-  var TZ_MAX_DEFAULT = 7.5;         // dev-knob default, range [4.8, 9]
-  var TZ_ARM_SCALE = 2.0;           // scale at which the cursor lets go
-  var TZ_HOLD = 0.06;               // fraction of the runway held untouched
-                                     // before the zoom starts at all
-  var TZ_BLUR_MAX = 26;             // px of blur ON SCREEN at full
-                                     // separation. The letters sit inside
-                                     // the parent's scale, so a radius
-                                     // written here is magnified by it -
-                                     // at 5x a flat 16px was landing as
-                                     // ~80px and the name turned to soup
-                                     // halfway through. paintTunnel divides
-                                     // by the live scale to keep what you
-                                     // actually see at this figure.
-  var TZ_BLUR_STEP = 0.5;           // px - blur is a real per-pixel
-                                     // convolution, not a cheap compositor
-                                     // op like transform/opacity, so its
-                                     // written value is quantized to whole
-                                     // pixels (see frame()) instead of
-                                     // rewritten at full float precision
-                                     // every frame - a static filter value
-                                     // is what lets the browser skip
-                                     // redoing the blur on a given frame
-  var TZ_RANGE_FACTOR = 0.9;        // fraction of viewport height. This is
-                                     // the whole difference between an
-                                     // effect you see and one a single
-                                     // flick of the wheel skips past: at
-                                     // ~0.2 the word was through the entire
-                                     // zoom inside one scroll gesture. Just
-                                     // under a viewport gives the tunnel a
-                                     // deliberate, held length without the
-                                     // page ever feeling stuck.
-
-  /* Per-letter separation. The glyphs do not just ride the parent scale -
-     each one also drifts outward from the word's centre, tips slightly with
-     the direction it is leaving in, and blurs and fades on its own clock,
-     outermost first. That staggered exit is what makes it read as the word
-     coming apart around you rather than a picture of a word being enlarged. */
-  var TZ_SPREAD = 0.42;             // em of extra outward drift at full
-                                     // separation (rides the parent scale)
-  var TZ_RISE = 0.09;               // em of vertical drift, alternating
-  var TZ_TILT = 7;                  // deg of tip at full separation
-  var TZ_LAG = 0.34;                // how much later the centre letters go
-                                     // than the outermost ones
-  var TZ_FADE_AT = 0.74;            // per-letter progress where it starts
-                                     // giving up its opacity - late, so the
-                                     // letters are still solid while they
-                                     // separate and only dissolve on the
-                                     // way out of frame
-  var TZ_SPAN = 1 - TZ_LAG;         // length of one letter's own window
-
-  // Nothing happens for the first TZ_HOLD of the runway - the name stays put
-  // and sharp before the effect kicks in, instead of starting to blur the
-  // instant scrolling begins.
-  //
-  // The curve past that point eases IN, not out. An ease-out spent nine
-  // tenths of the effect in the first third of the runway: the name was
-  // blurred away and gone by half a scroll, and the rest of the tunnel was
-  // dead travel. Accelerating instead is also what the effect is pretending
-  // to be - something being pushed towards you gains speed - so the name
-  // stays large and readable while it opens up, and only tears away at the
-  // very end.
-  function tzEase(t) {
-    if (t <= TZ_HOLD) return 0;
-    var u = (t - TZ_HOLD) / (1 - TZ_HOLD);
-    return Math.pow(u, 1.6);
-  }
-
-  var tzMax = TZ_MAX_DEFAULT;       // dev-knob value
-  var tzRange = 0;                  // px, recomputed in measure()
-  var tzScale = 1;                  // lerped, painted parent scale
-  var tzE = 0;                      // lerped separation progress, 0..1
-  var tzLetters = [];               // { el, dir, alt, lag, blurWritten }
-  var tzArmed = false;
-  var tzActive = false;             // true anywhere inside the runway - lets
-                                     // the wordmark render above the nav
-                                     // instead of being clipped by the mask
-                                     // that normally keeps scrolled content
-                                     // from peeking above it (styles.css)
 
   /* ---------- measure: the only place we read layout ---------- */
 
   function measure() {
     vh = stage.clientHeight;                 // = real viewport height / zoom
-    tzRange = Math.max(1, vh * TZ_RANGE_FACTOR);
 
     // Take the content out of its transform to read its true height
     var prev = content.style.transform;
@@ -170,22 +75,12 @@
     for (var i = 0; i < nodes.length; i++) {
       items.push({ el: nodes[i], top: nodes[i].offsetTop, shown: nodes[i].classList.contains('in') });
     }
-    // Where the tunnel launch sets down: the top of the work section, i.e.
-    // one hero out of the way. Read here, inside the un-transformed block,
-    // with the rest of the layout.
-    var work = content.querySelector('.work');
-    landing = work ? work.offsetTop : vh;
-
     content.style.transform = prev;
 
     max = Math.max(0, h - vh);
-    realMax = max + tzRange;         // adds the frozen tunnel runway up front
 
     // Body carries the real scroll height; content space is scaled by zoom.
-    // The extra tzRange is real scroll distance that produces no content
-    // movement at all (see the tunnel comment above) - it has to be added
-    // here or the last tzRange of the page would be unreachable by scrolling.
-    document.body.style.height = Math.round((h + tzRange) * zoom) + 'px';
+    document.body.style.height = Math.round(h * zoom) + 'px';
 
     // Stand the background up at the photo's own aspect ratio (never
     // shorter than the viewport). It grows downwards, so the scene always
@@ -199,42 +94,9 @@
     var travel = bgh - vh;
     bgRate = max > 0 ? Math.min(BG_RATE, travel / max) : 0;
 
-    measureLetters();
-
-    target = current = clamp(window.scrollY / zoom, 0, realMax);
-    var vy = clamp(current - tzRange, 0, max);
-    render(vy);
-    reveal(vy);
-    paintTunnel();
-  }
-
-  /* Where each glyph sits across the word, as -1 (left edge) .. +1 (right
-     edge) off its own centre. Re-read on every measure because the dev-mode
-     face switch and the font swap both change every letter's width. */
-  function measureLetters() {
-    var nodes = document.querySelectorAll('.wordmark .wm-l');
-    if (!nodes.length) { tzLetters = []; return; }
-
-    var first = nodes[0], lastN = nodes[nodes.length - 1];
-    var left = first.offsetLeft;
-    var right = lastN.offsetLeft + lastN.offsetWidth;
-    var mid = (left + right) / 2;
-    var half = Math.max(1, (right - left) / 2);
-
-    tzLetters = [];
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      var dir = ((el.offsetLeft + el.offsetWidth / 2) - mid) / half;
-      tzLetters.push({
-        el: el,
-        dir: dir,
-        alt: (i % 2 ? 1 : -1) * (0.6 + 0.4 * Math.abs(dir)),
-        // Outermost letters leave first: they are the ones a real camera
-        // push would carry past the frame edge soonest.
-        lag: TZ_LAG * (1 - Math.abs(dir)),
-        blurWritten: -1
-      });
-    }
+    target = current = clamp(window.scrollY / zoom, 0, max);
+    render(current);
+    reveal(current);
   }
 
   /* ---------- paint ---------- */
@@ -255,43 +117,6 @@
     }
   }
 
-  /* One write of the parent scale, then each glyph's own pose. Seven
-     elements a frame is nothing next to the blur, and doing the stagger
-     here rather than in CSS keeps the easing curves in one place. */
-  function paintTunnel() {
-    root.style.setProperty('--tz-scale', tzScale.toFixed(3));
-
-    for (var i = 0; i < tzLetters.length; i++) {
-      var L = tzLetters[i];
-
-      // Its own slice of the runway: every letter gets the same length of
-      // window, just started at a different moment, so the outer ones are
-      // genuinely gone while the centre is still on its way out - a shared
-      // finish line would have staggered only the shape, not the exit.
-      // Squared so a letter eases out of the word instead of jumping the
-      // moment its clock starts.
-      var p = clamp((tzE - L.lag) / TZ_SPAN, 0, 1);
-      var q = p * p;
-
-      var st = L.el.style;
-      st.setProperty('--l-x', (L.dir * TZ_SPREAD * q).toFixed(4) + 'em');
-      st.setProperty('--l-y', (L.alt * TZ_RISE * q).toFixed(4) + 'em');
-      st.setProperty('--l-rot', (L.dir * TZ_TILT * q).toFixed(2) + 'deg');
-      st.setProperty('--l-o',
-        (p < TZ_FADE_AT ? 1 : clamp(1 - (p - TZ_FADE_AT) / (1 - TZ_FADE_AT), 0, 1)).toFixed(3));
-
-      // Quantized on purpose - see TZ_BLUR_STEP above. Only actually
-      // touches the DOM (and triggers a re-blur) when the rounded value
-      // changes, which on most frames it does not.
-      var blurWant = TZ_BLUR_MAX * p / Math.max(1, tzScale);
-      var blurQ = Math.round(blurWant / TZ_BLUR_STEP) * TZ_BLUR_STEP;
-      if (blurQ !== L.blurWritten) {
-        L.blurWritten = blurQ;
-        st.setProperty('--l-blur', blurQ.toFixed(1) + 'px');
-      }
-    }
-  }
-
   /* ---------- loop ---------- */
 
   function frame(now) {
@@ -308,38 +133,8 @@
       last = 0;
     }
 
-    // Tunnel progress off the same lerped scroll value already computed
-    // above - free, no extra scroll read.
-    var tzWantE = tzEase(clamp(current / tzRange, 0, 1));
-    var tzWantScale = 1 + (tzMax - 1) * tzWantE;
-
-    // Chase the target values the same way target-cursor.js chases the
-    // pointer - frame-rate independent, so a fast/jerky scroll still glides.
-    var tzK = 1 - Math.pow(1 - 0.32, dt / 16.667);
-    tzScale += (tzWantScale - tzScale) * tzK;
-    tzE += (tzWantE - tzE) * tzK;
-
-    paintTunnel();
-
-    var shouldArm = tzScale >= TZ_ARM_SCALE;
-    if (shouldArm !== tzArmed) {
-      tzArmed = shouldArm;
-      document.body.classList.toggle('tunnel-armed', tzArmed);
-      document.dispatchEvent(new CustomEvent('tunnel:armed', { detail: { armed: tzArmed } }));
-    }
-
-    var shouldBeActive = current < tzRange;
-    if (shouldBeActive !== tzActive) {
-      tzActive = shouldBeActive;
-      document.body.classList.toggle('tunnel-active', tzActive);
-    }
-
-    // The page holds completely still until current passes tzRange - see
-    // the tunnel comment above measure(). vy picks up from exactly 0 the
-    // moment it does, so there is no jump at the handoff.
-    var vy = clamp(current - tzRange, 0, max);
-    render(vy);
-    reveal(vy);
+    render(current);
+    reveal(current);
 
     if (running) requestAnimationFrame(frame);
   }
@@ -352,67 +147,13 @@
   }
 
   function onScroll() {
-    target = clamp(window.scrollY / zoom, 0, realMax);
+    target = clamp(window.scrollY / zoom, 0, max);
     start();
   }
 
   /* ---------- wiring ---------- */
 
   window.addEventListener('scroll', onScroll, { passive: true });
-
-  /* ---------- one-gesture tunnel launch ----------
-
-     The runway is nearly a viewport tall on purpose (TZ_RANGE_FACTOR), which
-     reads well but costs the visitor five or six wheel ticks to get through -
-     the zoom stutters along one notch at a time and the page feels stuck.
-     So while we are inside the runway we take the gesture over: the first
-     downward input, however small, jumps the real scroll position to the far
-     end of the tunnel and the existing lerp plays the whole zoom out from
-     wherever it was. One flick expands the wordmark and hands off to the
-     page, which is what a single scroll is asking for.
-
-     Only downward input inside the runway is swallowed; scrolling back up
-     into it, and everything past it, stays completely native. */
-
-  function tunnelLaunch() {
-    if (target >= tzRange - 1) return false;
-    // Past the end of the runway, not just up to it: stopping at tzRange
-    // finishes the zoom but leaves the page sitting on the hero, so the
-    // gesture reads as "the word exploded and nothing scrolled". Carrying on
-    // to the work section is the handoff the scroll was asking for.
-    var to = clamp(tzRange + landing, 0, realMax);
-    window.scrollTo(0, Math.round(to * zoom));
-    target = to;                       // don't wait on the scroll event
-    start();
-    return true;
-  }
-
-  // Non-passive so the native scroll this gesture would have done can be
-  // dropped - otherwise it lands on top of ours and overshoots past the
-  // handoff. Cheapest possible early-out when we are not in the runway.
-  window.addEventListener('wheel', function (e) {
-    if (target >= tzRange - 1 || e.deltaY <= 0) return;
-    if (tunnelLaunch()) e.preventDefault();
-  }, { passive: false });
-
-  var touchY = 0;
-  window.addEventListener('touchstart', function (e) {
-    touchY = e.touches[0].clientY;
-  }, { passive: true });
-
-  window.addEventListener('touchmove', function (e) {
-    if (target >= tzRange - 1) return;
-    if (touchY - e.touches[0].clientY < 6) return;   // upward swipe = scroll down
-    if (tunnelLaunch()) e.preventDefault();
-  }, { passive: false });
-
-  var DOWN_KEYS = { 'ArrowDown': 1, 'PageDown': 1, ' ': 1, 'Spacebar': 1, 'End': 1 };
-  window.addEventListener('keydown', function (e) {
-    if (target >= tzRange - 1 || !DOWN_KEYS[e.key]) return;
-    var t = e.target;
-    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    if (tunnelLaunch()) e.preventDefault();
-  });
 
   var rt;
   window.addEventListener('resize', function () {
@@ -444,7 +185,6 @@
     { id: 'gap',  label: 'Project gap',   min: -420, max: 420,  step: 2,    val: null,    fmt: function (v) { return v + 'px'; } },
     { id: 'hero', label: 'Hero size',     min: 0.4,  max: 2,    step: 0.01, val: 1.16,    fmt: function (v) { return v.toFixed(2) + 'x'; } },
     { id: 'bgz',  label: 'BG zoom',       min: 0.2,  max: 1.6,  step: 0.01, val: 1,       fmt: function (v) { return v.toFixed(2) + 'x'; } },
-    { id: 'tunnelzoom', label: 'Tunnel zoom', min: 4.8, max: 9, step: 0.1, val: TZ_MAX_DEFAULT, fmt: function (v) { return v.toFixed(1) + 'x'; } },
     { id: 'bg',   label: 'BG parallax',   min: 0,    max: 1,    step: 0.01, val: 0.28,    fmt: function (v) { return v.toFixed(2) + 'x'; } },
     { id: 'ease', label: 'Scroll ease',   min: 0.03, max: 0.2,  step: 0.002, val: 0.07,   fmt: function (v) { return v.toFixed(3); } }
   ];
@@ -597,9 +337,9 @@
       zoom = v;
       root.style.setProperty('--zoom', v);
       measure();
-      target = current = clamp(keep, 0, realMax);
+      target = current = clamp(keep, 0, max);
       window.scrollTo(0, Math.round(current * zoom));
-      render(clamp(current - tzRange, 0, max));
+      render(current);
     } else if (id === 'pad') {
       root.style.setProperty('--pad', v + 'vw');
       measure();
@@ -620,8 +360,6 @@
       measure();
     } else if (id === 'ease') {
       EASE = v;
-    } else if (id === 'tunnelzoom') {
-      tzMax = v;
     }
   }
 
@@ -740,8 +478,7 @@
         '  --branch-x: ' + branch.x + 'px;\n' +
         '  --branch-y: ' + branch.y + 'px;\n' +
         '  --branch-rot: ' + branch.r + 'deg;\n}\n' +
-        '/* main.js */ BG_RATE = ' + byId('bg').val + '; EASE = ' + byId('ease').val + ';\n' +
-        '/* tunnel zoom = ' + byId('tunnelzoom').val + 'x */\n';
+        '/* main.js */ BG_RATE = ' + byId('bg').val + '; EASE = ' + byId('ease').val + ';\n';
       var btn = e.currentTarget;
       if (navigator.clipboard) navigator.clipboard.writeText(css);
       console.log(css);
@@ -763,12 +500,11 @@
       branch.x = 0; branch.y = -1520; branch.r = 0; applyBranch();
       wmIdx = 0; applyWm();
       bgSrc = 0; applyBg();
-      zoom = 1; BG_RATE = 0.28; EASE = 0.07; tzMax = TZ_MAX_DEFAULT;
+      zoom = 1; BG_RATE = 0.28; EASE = 0.07;
       byId('pad').val = null; seedPad();
       byId('gap').val = 32;
       byId('maxw').val = 1130; byId('hero').val = 1.16; byId('bgz').val = 1;
       byId('bg').val = 0.28; byId('ease').val = 0.07; byId('zoom').val = 1;
-      byId('tunnelzoom').val = TZ_MAX_DEFAULT;
       knobs.forEach(function (k) {
         dev.querySelector('#k-' + k.id).value = k.val;
         dev.querySelector('#v-' + k.id).textContent = k.fmt(k.val);

@@ -609,19 +609,6 @@ body{
   overflow:hidden;
 }
 
-/* While the wordmark tunnel is mid-flight (main.js toggles this - it covers
-   the whole frozen runway, not just the armed/huge part), let it grow past
-   the mask's top edge and paint over the nav instead of being clipped right
-   at the nav's bottom edge. Content never scrolls during this window (the
-   whole point of the tunnel lock), so nothing else can peek above the nav
-   as a side effect - only the wordmark actually grows large enough to reach
-   up there. The "body" element selector here is deliberate: .nav is
-   z-index:5, and this needs to out-rank it without touching .nav itself. */
-.js body.tunnel-active .content-mask{
-  overflow:visible;
-  z-index:6;
-}
-
 .content{
   position:relative;
   padding:0 var(--pad);
@@ -734,9 +721,9 @@ body,
   min-height:calc(100svh - 2 * var(--nav-h));
   display:flex;
   flex-direction:column;
-  align-items:center;
+  align-items:flex-start;
   justify-content:center;
-  text-align:center;
+  text-align:left;
   position:relative;
   padding:14vh 0 12vh;
 }
@@ -748,32 +735,111 @@ body,
   opacity:.78;
 }
 
-.wordmark{
-  /* The face is a dev-mode pick - Z / X cycle the shortlist. Scale,
-     tracking and weight ride along with it, because no two display faces
-     sit in the same optical box and a single font-size would leave one
-     towering over the next. The fallbacks here are the plain sans look. */
+/* The intro is one sentence set as two display lines: the name, then the
+   job. Both ride the same face and size so they read as a single block of
+   type; only their weight and value separate them, which is what keeps the
+   name the thing you see first without having to make it enormous. */
+.intro{
   font-family:var(--wm-font, var(--sans));
-  font-size:calc(clamp(3.75rem, 15vw, 15rem) * var(--hero-scale) * var(--wm-scale, 1));
-  line-height:.82;
-  letter-spacing:var(--wm-ls, -.045em);
-  font-weight:var(--wm-weight, 500);
-
-  /* The cursor latches onto the wordmark, so its box has to be the type's
-     box. In a centred flex column the h1 is already shrink-to-fit, but the
-     .82 line-height crops the em box tighter than the glyphs - the padding
-     lets the bracket clear the caps, and the negative margins hand back the
-     space so nothing below moves. */
-  padding:.12em .1em;
-  margin:.16em -.1em -.12em;
+  font-size:calc(clamp(2.75rem, 7.2vw, 6.5rem) * var(--hero-scale) * var(--wm-scale, 1));
+  line-height:.92;
+  letter-spacing:var(--wm-ls, .005em);
+  font-weight:var(--wm-weight, 400);
+  text-transform:uppercase;
+  margin:.1em 0 0;
+}
+.intro-line{
+  display:block;
 }
 
+/* The name line. .wordmark is what carries the cursor bracket's park pose
+   (target-cursor.js), so its box has to be the type's box - the padding
+   lets the bracket clear the caps and the negative margin hands the space
+   straight back so the role line underneath never moves. */
+.wordmark{
+  display:inline-block;
+  padding:.1em .08em;
+  margin:-.1em -.08em;
+}
+
+/* The role line sits a step back - smaller, lighter, and tracked out, so it
+   reads as the clause after the comma rather than a second headline. The
+   size is in em so it stays locked to whatever the name is doing at any
+   viewport width. */
+.intro-role{
+  font-size:.42em;
+  letter-spacing:.16em;
+  opacity:.55;
+  margin-top:.34em;
+}
+
+/* The comma is structural punctuation at this size - at full value it reads
+   as a glyph of the name. */
+.comma{ opacity:.34; }
+
+.greeting{
+  display:flex;
+  align-items:center;
+  gap:.7em;
+  font-family:var(--sans);
+  font-size:clamp(.7rem,.82vw,.8rem);
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.5;
+  margin:0;
+}
+/* Short rule leading into the greeting - the editorial tick that tells you
+   where the column starts. */
+.tick{
+  display:block;
+  width:clamp(1.5rem,3.4vw,2.75rem);
+  height:1px;
+  background:currentColor;
+  opacity:.55;
+}
+
+/* The hand-off line. Rule, label, arrow - small, set in the body face so it
+   stays clearly a caption and not a third line of the headline. */
 .lede{
-  margin-top:clamp(1.5rem,3vw,2.5rem);
-  max-width:30ch;
-  font-size:calc(clamp(1.1875rem,1.85vw,1.5rem) * min(var(--hero-scale), 1.35));
-  line-height:1.55;
-  opacity:.86;
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  margin-top:clamp(2.25rem,5vw,3.5rem);
+  max-width:none;
+  font-family:var(--sans);
+  font-size:clamp(.72rem,.86vw,.84rem);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  opacity:.66;
+}
+.lede-rule{
+  display:block;
+  width:clamp(2rem,6vw,4.5rem);
+  height:1px;
+  background:currentColor;
+  opacity:.45;
+}
+.lede-arrow{
+  display:block;
+  width:.72em;
+  color:currentColor;
+}
+.lede-arrow svg{
+  display:block;
+  width:100%;
+  height:auto;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  /* A slow, small nudge downwards - enough to read as "keep going", short
+     of an animation you have to watch. */
+  animation:lede-nudge 2.6s var(--ease) infinite;
+}
+@keyframes lede-nudge{
+  0%,62%,100%{ transform:translateY(0); }
+  78%        { transform:translateY(22%); }
 }
 
 /* ---------- projects ---------- */
@@ -1021,73 +1087,69 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
   transform:translate3d(0,0,0);
 }
 
-/* .wordmark carries data-r for its one-time fade-in on load, and is also
-   the scroll-linked hyperscale close-up target. Scoping this to .in (three
-   selectors, beats [data-r].in's two unconditionally - no source-order
-   dependency) means the fade-in above plays untouched, and only once it's
-   done does this take over completely. transition:none is required, not
-   cosmetic: [data-r]'s own transition (transform 1.1s, opacity .9s) would
-   otherwise still apply here, and since main.js rewrites --tz-scale every
-   single frame while scrolling, each write would restart a fresh 1.1s
-   transition toward an already-stale target - the wordmark would barely
-   appear to grow at all while actively scrolling. main.js already does its
-   own frame-by-frame lerp for the eased, weighted motion; this must be
-   instant so that lerp is the only smoothing in effect.
-
-   The scale lives here, on the box the cursor bracket measures - transform
-   is compositor-only and stays cheap no matter how large it grows. Blur is
-   the opposite: it is a real per-pixel convolution, so it is pushed down
-   onto the individual .wm-l letters rather than stacking on the same layer
-   as this animating transform (a filter+transform layer forces the browser
-   to re-rasterize the blur at the combined scale on every frame, not just
-   when the blur radius itself changes - see
-   developer.chrome.com/blog/animated-blur). main.js also quantizes each
-   letter's blur to whole pixels so most frames don't change it at all,
-   since a static filter value is what actually lets the browser skip
-   redoing the convolution. */
-.wordmark[data-r].in{
-  transform-origin:center center;
-  transform:scale(var(--tz-scale, 1));
+/* The intro lines use a block-wipe reveal instead of the generic fade-up:
+   opacity stays 1 from first paint, and a solid .wm-fx::after block covers
+   the type and slides off to the right the moment .in fires. */
+.intro[data-r]{
+  opacity:1;
+  transform:none;
   transition:none;
-  will-change:transform;
+}
 
-  /* The lede is a later sibling and carries its own transform, so without
-     this it wins the paint order and the small subtitle sits on top of a
-     letter twenty times its size - which reads as a mistake rather than as
-     something passing the camera. */
+/* Phase 1 (0->60%): clip-path hides the left portion of the block and grows
+   that hidden region rightward - revealing letters at a constant pace.
+   Phase 2 (60->100%): BOTH clip edges shift right by the same absolute amount,
+   so the remaining visible square keeps its width exactly and slides clear.
+
+   Using clip-path on the ::after (not scaleX) means the right edge of the
+   visible block is NOT anchored to the word's right boundary - it can travel
+   independently.  1.3em ~ block height (cap-height + .12em top/bottom) so
+   the remaining slab is genuinely square at whatever viewport size.
+
+   calc(100% - 1.3em): left inset that leaves exactly 1.3em visible on the
+     right - a square.
+   200% / calc(-100% - 1.3em): both inset values shift right by
+     calc(100% + 1.3em) so the square exits completely off the right edge. */
+@keyframes wm-wipe{
+  0%  { clip-path:inset(0  0                    0  0%);
+        animation-timing-function:linear; }
+  60% { clip-path:inset(0  0                    0  calc(100% - 1.3em));
+        animation-timing-function:cubic-bezier(.4,0,1,1); }
+  100%{ clip-path:inset(0  calc(-100% - 1.3em)  0  200%); }
+}
+/* .wm-fx must be a positioned container at all times so the wipe block can
+   sit inside it both before and after .in fires. */
+.wm-fx{
+  display:inline-block;
   position:relative;
-  z-index:2;
 }
-.wordmark[data-r].in .wm-fx{
-  display:inline-block;
+/* Wipe block: solid rectangle covering its line on load. clip-path (above)
+   trims it to a square that slides off to the right. */
+.wm-fx::after{
+  content:'';
+  position:absolute;
+  top:-.06em;
+  bottom:-.06em;
+  left:0;
+  right:0;
+  background:var(--ink);
+  pointer-events:none;
 }
-
-/* Every glyph is its own layer so the word can come apart instead of
-   sliding up as one slab: main.js writes --l-x / --l-y / --l-rot / --l-blur /
-   --l-o per letter, on its own staggered clock (outer letters leave first,
-   the way they would if you really were flying through the word). The
-   translate is in em on purpose - it rides the parent's scale, so the
-   separation accelerates with the zoom rather than reading as a flat slide.
-
-   transition:none for the same reason as the parent above: these are
-   rewritten every frame and main.js owns the smoothing. */
-.wm-l{
-  display:inline-block;
-  transform:translate3d(var(--l-x, 0em), var(--l-y, 0em), 0)
-            rotate(var(--l-rot, 0deg));
-  filter:blur(var(--l-blur, 0px));
-  opacity:var(--l-o, 1);
-  transition:none;
+.intro[data-r].in .wm-fx::after{
+  animation:wm-wipe 1.9s both;
 }
-.wordmark[data-r].in .wm-l{
-  will-change:transform, filter, opacity;
+/* The role line is wiped a beat after the name, so the sentence lands in
+   the order you read it. */
+.intro[data-r].in .intro-role .wm-fx::after{
+  animation-delay:.34s;
 }
 
-/* Hero cascades in on load */
-.hero [data-r]:nth-child(1){ transition-delay:.08s; }
-.hero [data-r]:nth-child(2){ transition-delay:.18s; }
-.hero [data-r]:nth-child(3){ transition-delay:.34s; }
-.hero [data-r]:nth-child(4){ transition-delay:.5s;  }
+/* Hero cascades in on load: greeting -> intro -> lede. The intro itself is
+   revealed by the wipe above, not by this fade, so the delay here only
+   staggers the greeting and the hand-off line around it. */
+.hero .greeting[data-r]{ transition-delay:.04s; }
+.hero .intro[data-r]  { transition-delay:.14s; }
+.hero .lede[data-r]   { transition-delay:.62s; }
 
 /* A project card reveals image and caption together, then detail trails in */
 .project[data-r]{ opacity:1; transform:none; }
@@ -1337,14 +1399,11 @@ a.project:focus-visible{ outline:1px solid var(--rule); outline-offset:12px; }
    art, and every .frame image are never touched.
 --------------------------------------------------------------------*/
 
-/* .wordmark is excluded here (not just :not(.is-cursor)) because it now
-   fully owns its own opacity/filter via the scroll tunnel effect above -
-   without this exclusion, this rule's specificity (the "body" element
-   selector edges out .wordmark[data-r].in's three classes/attributes) would
-   silently override the tunnel's opacity/blur back to .85/1px any time the
-   cursor bracket is latched onto anything at all, no matter how far into
-   the tunnel the page had scrolled. */
-body.tc-focus .hero > *:not(.is-cursor):not(.wordmark),
+/* The :has() is not optional here. The latch lands on .wordmark, which is a
+   grandchild of .hero (it sits inside .intro > .intro-line), so matching on
+   :not(.is-cursor) alone would blur the whole intro block - including the
+   very line the bracket is sitting on - the moment you hovered the name. */
+body.tc-focus .hero > *:not(.is-cursor):not(:has(.is-cursor)),
 body.tc-focus .project:not(.is-cursor) .meta,
 body.tc-focus .project:not(.is-cursor) .detail,
 body.tc-focus .outro > *:not(.is-cursor){
@@ -1370,8 +1429,9 @@ body.tc-focus .outro > *:not(.is-cursor){
   /* Manual paging still works; only the fade between shots is cut. */
   .shots img{ transition:none !important; }
 
-  .wordmark{ transform:none !important; filter:none !important; opacity:1 !important; }
-  .wm-l{ transform:none !important; filter:none !important; opacity:1 !important; }
+  .intro{ transform:none !important; filter:none !important; opacity:1 !important; }
+  .wm-fx::after{ display:none; }
+  .lede-arrow svg{ animation:none !important; }
 }
 
 /* --- photo crossfade overlay (dissolve) --- */

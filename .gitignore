@@ -1,2 +1,6 @@
 assets/**/_originals/
 wisp/*
+
+# puppeteer + the layout screenshot script (dev tooling, not the site)
+node_modules/
+screenshots/

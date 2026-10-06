@@ -71,16 +71,10 @@
      other real controls on the page. */
 
   var TARGET_SEL = '.project, .wordmark, .cta, .nav a, .theme-switch';
-  var TARGET_SEL_NO_WORDMARK = '.project, .cta, .nav a, .theme-switch';
   var GRAVITY_RADIUS = 100;  // px outside the box where the pull begins
   var GRAVITY_STICK  = CONFIG.gravityStick;
 
-  // Set once main.js reports the wordmark has zoomed past ~2x during the
-  // scroll tunnel effect (styles.css .wordmark, main.js TZ_ARM_SCALE) - the
-  // bracket has no business chasing type that large.
-  var wordmarkLocked = false;
-
-  function selector() { return wordmarkLocked ? TARGET_SEL_NO_WORDMARK : TARGET_SEL; }
+  function selector() { return TARGET_SEL; }
   function radius()   { return GRAVITY_RADIUS; }
   function stick()    { return GRAVITY_STICK; }
 
@@ -431,13 +425,6 @@
 
   document.addEventListener('dev:mode', function (e) {
     suspend(!!(e.detail && e.detail.open));
-  });
-
-  document.addEventListener('tunnel:armed', function (e) {
-    wordmarkLocked = !!(e.detail && e.detail.armed);
-    if (wordmarkLocked && target && target.classList.contains('wordmark')) {
-      unlatch();
-    }
   });
 
   /* ---------- wiring ---------- */
