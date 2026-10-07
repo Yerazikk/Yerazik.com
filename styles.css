@@ -788,18 +788,8 @@ body,
   opacity:.5;
   margin:0;
 }
-/* Short rule leading into the greeting - the editorial tick that tells you
-   where the column starts. */
-.tick{
-  display:block;
-  width:clamp(1.5rem,3.4vw,2.75rem);
-  height:1px;
-  background:currentColor;
-  opacity:.55;
-}
-
-/* The hand-off line. Rule, label, arrow - small, set in the body face so it
-   stays clearly a caption and not a third line of the headline. */
+/* The hand-off line - small, set in the body face so it stays clearly a
+   caption and not a third line of the headline. */
 .lede{
   display:flex;
   align-items:center;
@@ -812,36 +802,6 @@ body,
   text-transform:uppercase;
   opacity:.66;
 }
-.lede-rule{
-  display:block;
-  width:clamp(2rem,6vw,4.5rem);
-  height:1px;
-  background:currentColor;
-  opacity:.45;
-}
-.lede-arrow{
-  display:block;
-  width:.72em;
-  color:currentColor;
-}
-.lede-arrow svg{
-  display:block;
-  width:100%;
-  height:auto;
-  fill:none;
-  stroke:currentColor;
-  stroke-width:1.6;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-  /* A slow, small nudge downwards - enough to read as "keep going", short
-     of an animation you have to watch. */
-  animation:lede-nudge 2.6s var(--ease) infinite;
-}
-@keyframes lede-nudge{
-  0%,62%,100%{ transform:translateY(0); }
-  78%        { transform:translateY(22%); }
-}
-
 /* ---------- projects ---------- */
 
 /* The spacing is a margin rather than a flex gap on purpose: gap cannot go
@@ -1431,7 +1391,6 @@ body.tc-focus .outro > *:not(.is-cursor){
 
   .intro{ transform:none !important; filter:none !important; opacity:1 !important; }
   .wm-fx::after{ display:none; }
-  .lede-arrow svg{ animation:none !important; }
 }
 
 /* --- photo crossfade overlay (dissolve) --- */
